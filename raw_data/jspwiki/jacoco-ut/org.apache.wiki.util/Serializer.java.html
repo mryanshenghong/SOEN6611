@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Serializer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">Serializer.java</span></div><h1>Serializer.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+
+/**
+ *  Provides static helper functions for serializing different objects.
+ *  
+ *  @since 2.8
+ */
+public final class Serializer
+{
+    /**
+     * Prefix used to indicated that a serialized item was encoded with Base64.
+     */
+    protected static final String BASE64_PREFIX = &quot;base64 &quot;;
+
+    /**
+     *  Prevent instantiation.
+     */
+    private Serializer()
+    {}
+    
+    /**
+     * Deserializes a Base64-encoded String into a HashMap. Both the keys and values
+     * must implement {@link java.io.Serializable}.
+     * @param rawString the String contents containing the map to be deserialized
+     * @return the attributes, parsed into a Map
+     * @throws IOException if the contents cannot be parsed for any reason
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public static Map&lt; String, ? extends Serializable &gt; deserializeFromBase64( String rawString ) throws IOException {
+        // Decode from Base64-encoded String to byte array
+<span class="fc" id="L62">        byte[] decodedBytes = Base64.getDecoder().decode( rawString.getBytes( StandardCharsets.UTF_8 ) );</span>
+        
+        // Deserialize from the input stream to the Map
+<span class="fc" id="L65">        InputStream bytesIn = new ByteArrayInputStream( decodedBytes );</span>
+<span class="fc" id="L66">        try( ObjectInputStream in = new ObjectInputStream( bytesIn ) ) {</span>
+<span class="fc" id="L67">            return ( HashMap&lt; String, Serializable &gt; )in.readObject();</span>
+<span class="nc" id="L68">        } catch ( ClassNotFoundException e ) {</span>
+<span class="nc" id="L69">            throw new IOException( &quot;Could not deserialiaze user profile attributes. Reason: &quot; + e.getMessage() );</span>
+        }
+    }
+
+    /**
+     * Serializes a Map and formats it into a Base64-encoded String. For ease of serialization, the Map contents
+     * are first copied into a HashMap, then serialized into a byte array that is encoded as a Base64 String.
+     * @param map the Map to serialize
+     * @return a String representing the serialized form of the Map
+     * @throws IOException If serialization cannot be done
+     */
+    public static String serializeToBase64( Map&lt; String, Serializable &gt; map ) throws IOException {
+        // Load the Map contents into a defensive HashMap
+<span class="fc" id="L82">        Map&lt; String, Serializable &gt; serialMap = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L83">        serialMap.putAll( map );</span>
+        
+        // Serialize the Map to an output stream
+<span class="fc" id="L86">        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();</span>
+<span class="fc" id="L87">        ObjectOutputStream out = new ObjectOutputStream( bytesOut );</span>
+<span class="fc" id="L88">        out.writeObject( serialMap );</span>
+<span class="fc" id="L89">        out.close();</span>
+        
+        // Transform to Base64-encoded String
+<span class="fc" id="L92">        byte[] result = Base64.getEncoder().encode( bytesOut.toByteArray() );</span>
+<span class="fc" id="L93">        return new String( result ) ;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

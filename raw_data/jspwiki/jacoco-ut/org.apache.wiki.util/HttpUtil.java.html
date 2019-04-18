@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HttpUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">HttpUtil.java</span></div><h1>HttpUtil.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+
+
+/**
+ *  Contains useful utilities for some common HTTP tasks.
+ *
+ *  @since 2.1.61.
+ */
+public final class HttpUtil {
+
+<span class="fc" id="L40">    static Logger log = Logger.getLogger( HttpUtil.class );</span>
+    
+    /** Private constructor to prevent direct instantiation. */
+    private HttpUtil() {
+    }
+    
+    /**
+     * returns the remote address by looking into {@code x-forwarded-for} header or, if unavailable, 
+     * into {@link HttpServletRequest#getRemoteAddr()}.
+     * 
+     * @param req http request
+     * @return remote address associated to the request.
+     */
+    public static String getRemoteAddress( HttpServletRequest req ) {
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">		return StringUtils.isNotEmpty ( req.getHeader( &quot;X-Forwarded-For&quot; ) ) ? req.getHeader( &quot;X-Forwarded-For&quot; ) : </span>
+<span class="fc" id="L55">			                                                                   req.getRemoteAddr();</span>
+	}
+
+    /**
+     *  Attempts to retrieve the given cookie value from the request.
+     *  Returns the string value (which may or may not be decoded
+     *  correctly, depending on browser!), or null if the cookie is
+     *  not found. The algorithm will automatically trim leading
+     *  and trailing double quotes, if found.
+     *
+     *  @param request The current request
+     *  @param cookieName The name of the cookie to fetch.
+     *  @return Value of the cookie, or null, if there is no such cookie.
+     */
+
+    public static String retrieveCookieValue( HttpServletRequest request, String cookieName ) {
+<span class="fc" id="L71">        Cookie[] cookies = request.getCookies();</span>
+
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if( cookies != null ) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            for( int i = 0; i &lt; cookies.length; i++ ) {</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">                if( cookies[i].getName().equals( cookieName ) ) {</span>
+<span class="fc" id="L76">                    String value = cookies[i].getValue();</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">                    if( value.length() == 0 ) {</span>
+<span class="nc" id="L78">                        return null;</span>
+                    }
+<span class="pc bpc" id="L80" title="3 of 4 branches missed.">                    if( value.charAt( 0 ) == '&quot;' &amp;&amp; value.charAt( value.length() - 1 ) == '&quot;' ) {</span>
+<span class="nc" id="L81">                        value = value.substring( 1, value.length() - 1 );</span>
+                    }
+<span class="fc" id="L83">                    return value;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L88">        return null;</span>
+    }
+
+    /**
+     *  Creates an ETag based on page information.  An ETag is unique to each page
+     *  and version, so it can be used to check if the page has changed.  Do not
+     *  assume that the ETag is in any particular format.
+     *  
+     *  @param pageName  The page name for which the ETag should be created.
+     *  @param lastModified  The page last modified date for which the ETag should be created.
+     *  @return A String depiction of an ETag.
+     */
+    public static String createETag( String pageName, Date lastModified ) {
+<span class="nc" id="L101">        return Long.toString( pageName.hashCode() ^ lastModified.getTime() );</span>
+    }
+    
+    /**
+     *  If returns true, then should return a 304 (HTTP_NOT_MODIFIED)
+     *  @param req the HTTP request
+     *  @param pageName the wiki page name to check for
+     *  @param lastModified the last modified date of the wiki page to check for
+     *  @return the result of the check
+     */
+    public static boolean checkFor304( HttpServletRequest req, String pageName, Date lastModified ) {
+        //
+        //  We'll do some handling for CONDITIONAL GET (and return a 304)
+        //  If the client has set the following headers, do not try for a 304.
+        //
+        //    pragma: no-cache
+        //    cache-control: no-cache
+        //
+
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if( &quot;no-cache&quot;.equalsIgnoreCase( req.getHeader( &quot;Pragma&quot; ) )</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            || &quot;no-cache&quot;.equalsIgnoreCase( req.getHeader( &quot;cache-control&quot; ) ) ) {</span>
+            // Wants specifically a fresh copy
+        } else {
+            //
+            //  HTTP 1.1 ETags go first
+            //
+<span class="nc" id="L127">            String thisTag = createETag( pageName, lastModified );</span>
+                        
+<span class="nc" id="L129">            String eTag = req.getHeader( &quot;If-None-Match&quot; );</span>
+            
+<span class="nc bnc" id="L131" title="All 4 branches missed.">            if( eTag != null &amp;&amp; eTag.equals(thisTag) ) {</span>
+<span class="nc" id="L132">                return true;</span>
+            }
+            
+            //
+            //  Next, try if-modified-since
+            //
+<span class="nc" id="L138">            DateFormat rfcDateFormat = new SimpleDateFormat(&quot;EEE, dd MMM yyyy HH:mm:ss z&quot;);</span>
+
+            try {
+<span class="nc" id="L141">                long ifModifiedSince = req.getDateHeader( &quot;If-Modified-Since&quot; );</span>
+
+                //log.info(&quot;ifModifiedSince:&quot;+ifModifiedSince);
+<span class="nc bnc" id="L144" title="All 2 branches missed.">                if( ifModifiedSince != -1 ) {</span>
+<span class="nc" id="L145">                    long lastModifiedTime = lastModified.getTime();</span>
+
+                    //log.info(&quot;lastModifiedTime:&quot; + lastModifiedTime);
+<span class="nc bnc" id="L148" title="All 2 branches missed.">                    if( lastModifiedTime &lt;= ifModifiedSince ) {</span>
+<span class="nc" id="L149">                        return true;</span>
+                    }
+<span class="nc" id="L151">                } else {</span>
+                    try {
+<span class="nc" id="L153">                        String s = req.getHeader(&quot;If-Modified-Since&quot;);</span>
+
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                        if( s != null ) {</span>
+<span class="nc" id="L156">                            Date ifModifiedSinceDate = rfcDateFormat.parse(s);</span>
+                            //log.info(&quot;ifModifiedSinceDate:&quot; + ifModifiedSinceDate);
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                            if( lastModified.before(ifModifiedSinceDate) ) {</span>
+<span class="nc" id="L159">                                return true;</span>
+                            }
+                        }
+<span class="nc" id="L162">                    } catch (ParseException e) {</span>
+<span class="nc" id="L163">                        log.warn(e.getLocalizedMessage(), e);</span>
+<span class="nc" id="L164">                    }</span>
+                }
+<span class="nc" id="L166">            } catch( IllegalArgumentException e ) {</span>
+                // Illegal date/time header format.
+                // We fail quietly, and return false.
+                // FIXME: Should really move to ETags.
+<span class="nc" id="L170">            }</span>
+        }
+         
+<span class="nc" id="L173">        return false;</span>
+    }
+
+    /**
+     *  Attempts to form a valid URI based on the string given.  Currently
+     *  it can guess email addresses (mailto:).  If nothing else is given,
+     *  it assumes it to be an http:// url.
+     * 
+     *  @param uri  URI to take a poke at
+     *  @return Possibly a valid URI
+     *  @since 2.2.8
+     */
+    public static String guessValidURI( String uri ) {
+<span class="nc bnc" id="L186" title="All 2 branches missed.">        if( uri.indexOf( '@' ) != -1 ) {</span>
+<span class="nc bnc" id="L187" title="All 2 branches missed.">            if( !uri.startsWith( &quot;mailto:&quot; ) ) {</span>
+                // Assume this is an email address
+<span class="nc" id="L189">                uri = &quot;mailto:&quot; + uri;</span>
+            }
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        } else if( notBeginningWithHttpOrHttps( uri ) ) {</span>
+<span class="nc" id="L192">            uri = &quot;http://&quot; + uri;</span>
+        }
+        
+<span class="nc" id="L195">        return uri;</span>
+    }
+
+	static boolean notBeginningWithHttpOrHttps( String uri ) {
+<span class="nc bnc" id="L199" title="All 6 branches missed.">		return uri.length() &gt; 0 &amp;&amp; !( ( uri.startsWith(&quot;http://&quot; ) || uri.startsWith( &quot;https://&quot; ) ) );</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

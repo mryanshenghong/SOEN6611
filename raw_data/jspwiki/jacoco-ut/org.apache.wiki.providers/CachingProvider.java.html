@@ -1,0 +1,629 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CachingProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.providers</a> &gt; <span class="el_source">CachingProvider.java</span></div><h1>CachingProvider.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+ */
+package org.apache.wiki.providers;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import java.util.TreeSet;
+
+import org.apache.log4j.Logger;
+import org.apache.wiki.PageManager;
+import org.apache.wiki.WikiContext;
+import org.apache.wiki.WikiEngine;
+import org.apache.wiki.WikiPage;
+import org.apache.wiki.api.exceptions.NoRequiredPropertyException;
+import org.apache.wiki.api.exceptions.ProviderException;
+import org.apache.wiki.parser.MarkupParser;
+import org.apache.wiki.render.RenderingManager;
+import org.apache.wiki.search.QueryItem;
+import org.apache.wiki.util.ClassUtil;
+
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
+
+
+/**
+ *  Provides a caching page provider.  This class rests on top of a
+ *  real provider class and provides a cache to speed things up.  Only
+ *  if the cache copy of the page text has expired, we fetch it from
+ *  the provider.
+ *  &lt;p&gt;
+ *  This class does not detect if someone has modified the page
+ *  externally, not through JSPWiki routines.
+ *  &lt;p&gt;
+ *  Heavily based on ideas by Chris Brooking.
+ *  &lt;p&gt;
+ *  Since 2.10 uses the Ehcache library.
+ *
+ *  @since 1.6.4
+ */
+// FIXME: Synchronization is a bit inconsistent in places.
+// FIXME: A part of the stuff is now redundant, since we could easily use the text cache
+//        for a lot of things.  RefactorMe.
+
+<span class="fc" id="L65">public class CachingProvider implements WikiPageProvider {</span>
+
+<span class="fc" id="L67">    private static final Logger log = Logger.getLogger( CachingProvider.class );</span>
+
+<span class="fc" id="L69">    private CacheManager m_cacheManager = CacheManager.getInstance();</span>
+
+    private WikiPageProvider m_provider;
+    // FIXME: Find another way to the search engine to use instead of from WikiEngine?
+    private WikiEngine       m_engine;
+
+    private Cache m_cache;
+    /** Name of the regular page cache. */
+    public static final String CACHE_NAME = &quot;jspwiki.pageCache&quot;;
+
+    private Cache            m_textCache;
+    /** Name of the page text cache. */
+    public static final String TEXTCACHE_NAME = &quot;jspwiki.pageTextCache&quot;;
+
+    private Cache            m_historyCache;
+    /** Name of the page history cache. */
+    public static final String HISTORYCACHE_NAME = &quot;jspwiki.pageHistoryCache&quot;;
+
+<span class="fc" id="L87">    private long             m_cacheMisses = 0;</span>
+<span class="fc" id="L88">    private long             m_cacheHits   = 0;</span>
+
+<span class="fc" id="L90">    private long             m_historyCacheMisses = 0;</span>
+<span class="fc" id="L91">    private long             m_historyCacheHits   = 0;</span>
+
+    // FIXME: This MUST be cached somehow.
+
+<span class="fc" id="L95">    private boolean          m_gotall = false;</span>
+
+    // The default settings of the caches, if you want something else, provide an &quot;ehcache.xml&quot; file
+    // Please note that JSPWiki ships with a default &quot;ehcache.xml&quot; in the classpath
+    public static final int   DEFAULT_CACHECAPACITY   = 1000; // Good most wikis
+    public static final int   DEFAULT_CACHETIMETOLIVESECONDS = 24*3600;
+    public static final int   DEFAULT_CACHETIMETOIDLESECONDS = 24*3600;
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void initialize( WikiEngine engine, Properties properties )
+        throws NoRequiredPropertyException, IOException {
+<span class="fc" id="L109">        log.debug(&quot;Initing CachingProvider&quot;);</span>
+
+        // engine is used for getting the search engine
+<span class="fc" id="L112">        m_engine = engine;</span>
+
+<span class="fc" id="L114">        String cacheName = engine.getApplicationName() + &quot;.&quot; + CACHE_NAME;</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (m_cacheManager.cacheExists(cacheName)) {</span>
+<span class="fc" id="L116">            m_cache = m_cacheManager.getCache(cacheName);</span>
+        } else {
+<span class="fc" id="L118">            log.info(&quot;cache with name &quot; + cacheName +  &quot; not found in ehcache.xml, creating it with defaults.&quot;);</span>
+<span class="fc" id="L119">            m_cache = new Cache(cacheName, DEFAULT_CACHECAPACITY, false, false, DEFAULT_CACHETIMETOLIVESECONDS, DEFAULT_CACHETIMETOIDLESECONDS);</span>
+<span class="fc" id="L120">            m_cacheManager.addCache(m_cache);</span>
+        }
+
+<span class="fc" id="L123">        String textCacheName = engine.getApplicationName() + &quot;.&quot; + TEXTCACHE_NAME;</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (m_cacheManager.cacheExists(textCacheName)) {</span>
+<span class="fc" id="L125">            m_textCache= m_cacheManager.getCache(textCacheName);</span>
+        } else {
+<span class="fc" id="L127">            log.info(&quot;cache with name &quot; + textCacheName +  &quot; not found in ehcache.xml, creating it with defaults.&quot;);</span>
+<span class="fc" id="L128">            m_textCache = new Cache(textCacheName, DEFAULT_CACHECAPACITY, false, false, DEFAULT_CACHETIMETOLIVESECONDS, DEFAULT_CACHETIMETOIDLESECONDS);</span>
+<span class="fc" id="L129">            m_cacheManager.addCache(m_textCache);</span>
+        }
+
+<span class="fc" id="L132">        String historyCacheName = engine.getApplicationName() + &quot;.&quot; + HISTORYCACHE_NAME;</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        if (m_cacheManager.cacheExists(historyCacheName)) {</span>
+<span class="fc" id="L134">            m_historyCache= m_cacheManager.getCache(historyCacheName);</span>
+        } else {
+<span class="fc" id="L136">            log.info(&quot;cache with name &quot; + historyCacheName +  &quot; not found in ehcache.xml, creating it with defaults.&quot;);</span>
+<span class="fc" id="L137">            m_historyCache = new Cache(historyCacheName, DEFAULT_CACHECAPACITY, false, false, DEFAULT_CACHETIMETOLIVESECONDS, DEFAULT_CACHETIMETOIDLESECONDS);</span>
+<span class="fc" id="L138">            m_cacheManager.addCache(m_historyCache);</span>
+        }
+
+        //
+        // m_cache.getCacheEventNotificationService().registerListener(new CacheItemCollector());
+
+        //
+        //  Find and initialize real provider.
+        //
+<span class="fc" id="L147">        String classname = m_engine.getRequiredProperty( properties, PageManager.PROP_PAGEPROVIDER );</span>
+
+
+        try
+        {
+<span class="fc" id="L152">            Class&lt; ? &gt; providerclass = ClassUtil.findClass( &quot;org.apache.wiki.providers&quot;, classname);</span>
+
+<span class="fc" id="L154">            m_provider = (WikiPageProvider)providerclass.newInstance();</span>
+
+<span class="fc" id="L156">            log.debug(&quot;Initializing real provider class &quot;+m_provider);</span>
+<span class="fc" id="L157">            m_provider.initialize( engine, properties );</span>
+        }
+<span class="nc" id="L159">        catch( ClassNotFoundException e )</span>
+        {
+<span class="nc" id="L161">            log.error(&quot;Unable to locate provider class &quot;+classname,e);</span>
+<span class="nc" id="L162">            throw new IllegalArgumentException(&quot;no provider class&quot;, e);</span>
+        }
+<span class="nc" id="L164">        catch( InstantiationException e )</span>
+        {
+<span class="nc" id="L166">            log.error(&quot;Unable to create provider class &quot;+classname,e);</span>
+<span class="nc" id="L167">            throw new IllegalArgumentException(&quot;faulty provider class&quot;, e);</span>
+        }
+<span class="nc" id="L169">        catch( IllegalAccessException e )</span>
+        {
+<span class="nc" id="L171">            log.error(&quot;Illegal access to provider class &quot;+classname,e);</span>
+<span class="nc" id="L172">            throw new IllegalArgumentException(&quot;illegal provider class&quot;, e);</span>
+<span class="fc" id="L173">        }</span>
+<span class="fc" id="L174">    }</span>
+
+
+    private WikiPage getPageInfoFromCache(String name) throws ProviderException {
+        // Sanity check; seems to occur sometimes
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">        if (name == null) return null;</span>
+
+<span class="fc" id="L181">        Element cacheElement = m_cache.get(name);</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">        if (cacheElement == null) {</span>
+<span class="fc" id="L183">            WikiPage refreshed = m_provider.getPageInfo(name, WikiPageProvider.LATEST_VERSION);</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">            if (refreshed != null) {</span>
+<span class="fc" id="L185">                m_cache.put(new Element(name, refreshed));</span>
+<span class="fc" id="L186">                return refreshed;</span>
+            }  else {
+                // page does not exist anywhere
+<span class="fc" id="L189">                return null;</span>
+            }
+        }
+<span class="fc" id="L192">        return (WikiPage) cacheElement.getObjectValue();</span>
+    }
+
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public boolean pageExists( String pageName, int version )
+    {
+<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        if( pageName == null ) return false;</span>
+
+<span class="fc" id="L204">        WikiPage p = null;</span>
+
+        try
+        {
+<span class="fc" id="L208">            p = getPageInfoFromCache( pageName );</span>
+        }
+<span class="nc" id="L210">        catch( ProviderException e )</span>
+        {
+<span class="nc" id="L212">            log.info(&quot;Provider failed while trying to check if page exists: &quot;+pageName);</span>
+<span class="nc" id="L213">            return false;</span>
+<span class="fc" id="L214">        }</span>
+
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">        if( p != null )</span>
+        {
+<span class="fc" id="L218">            int latestVersion = p.getVersion();</span>
+
+<span class="pc bpc" id="L220" title="3 of 4 branches missed.">            if( version == latestVersion || version == LATEST_VERSION )</span>
+            {
+<span class="fc" id="L222">                return true;</span>
+            }
+
+<span class="nc" id="L225">            return m_provider.pageExists( pageName, version );</span>
+        }
+
+        try
+        {
+<span class="nc bnc" id="L230" title="All 2 branches missed.">            return getPageInfo( pageName, version ) != null;</span>
+        }
+<span class="nc" id="L232">        catch( ProviderException e )</span>
+        {}
+
+<span class="nc" id="L235">        return false;</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public boolean pageExists( String pageName )
+    {
+<span class="pc bpc" id="L244" title="1 of 2 branches missed.">        if( pageName == null ) return false;</span>
+
+<span class="fc" id="L246">        WikiPage p = null;</span>
+
+        try
+        {
+<span class="fc" id="L250">            p = getPageInfoFromCache( pageName );</span>
+        }
+<span class="nc" id="L252">        catch( ProviderException e )</span>
+        {
+<span class="nc" id="L254">            log.info(&quot;Provider failed while trying to check if page exists: &quot;+pageName);</span>
+<span class="nc" id="L255">            return false;</span>
+<span class="fc" id="L256">        }</span>
+
+        //
+        //  A null item means that the page either does not
+        //  exist, or has not yet been cached; a non-null
+        //  means that the page does exist.
+        //
+<span class="fc bfc" id="L263" title="All 2 branches covered.">        if( p != null )</span>
+        {
+<span class="fc" id="L265">            return true;</span>
+        }
+
+        //
+        //  If we have a list of all pages in memory, then any page
+        //  not in the cache must be non-existent.
+        //
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">        if( m_gotall )</span>
+        {
+<span class="fc" id="L274">            return false;</span>
+        }
+
+        //
+        //  We could add the page to the cache here as well,
+        //  but in order to understand whether that is a
+        //  good thing or not we would need to analyze
+        //  the JSPWiki calling patterns extensively.  Presumably
+        //  it would be a good thing if pageExists() is called
+        //  many times before the first getPageText() is called,
+        //  and the whole page is cached.
+        //
+<span class="nc" id="L286">        return m_provider.pageExists( pageName );</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public String getPageText( String pageName, int version )
+        throws ProviderException
+    {
+<span class="fc" id="L296">        String result = null;</span>
+
+<span class="pc bpc" id="L298" title="1 of 2 branches missed.">        if( pageName == null ) return null;</span>
+
+<span class="fc bfc" id="L300" title="All 2 branches covered.">        if( version == WikiPageProvider.LATEST_VERSION )</span>
+        {
+<span class="fc" id="L302">            result = getTextFromCache( pageName );</span>
+        }
+        else
+        {
+<span class="fc" id="L306">            WikiPage p = getPageInfoFromCache( pageName );</span>
+
+            //
+            //  Or is this the latest version fetched by version number?
+            //
+<span class="pc bpc" id="L311" title="1 of 4 branches missed.">            if( p != null &amp;&amp; p.getVersion() == version )</span>
+            {
+<span class="fc" id="L313">                result = getTextFromCache( pageName );</span>
+            }
+            else
+            {
+<span class="fc" id="L317">                result = m_provider.getPageText( pageName, version );</span>
+            }
+        }
+
+<span class="fc" id="L321">        return result;</span>
+    }
+
+
+    private String getTextFromCache(String pageName) throws ProviderException {
+<span class="fc" id="L326">        String text = null;</span>
+
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">        if (pageName == null) return null;</span>
+
+<span class="fc" id="L330">        Element cacheElement = m_textCache.get(pageName);</span>
+
+<span class="fc bfc" id="L332" title="All 2 branches covered.">        if (cacheElement != null) {</span>
+<span class="fc" id="L333">            m_cacheHits++;</span>
+<span class="fc" id="L334">            return (String) cacheElement.getObjectValue();</span>
+        }
+<span class="fc bfc" id="L336" title="All 2 branches covered.">        if (pageExists(pageName)) {</span>
+<span class="fc" id="L337">            text = m_provider.getPageText(pageName, WikiPageProvider.LATEST_VERSION);</span>
+<span class="fc" id="L338">            m_textCache.put(new Element(pageName, text));</span>
+<span class="fc" id="L339">            m_cacheMisses++;</span>
+<span class="fc" id="L340">            return text;</span>
+        }
+        //page not found (not in cache, not by real provider)
+<span class="fc" id="L343">        return  null;</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void putPageText(WikiPage page, String text) throws ProviderException {
+<span class="fc" id="L351">        synchronized (this) {</span>
+<span class="fc" id="L352">            m_provider.putPageText(page, text);</span>
+
+<span class="fc" id="L354">            page.setLastModified(new Date());</span>
+
+            // Refresh caches properly
+
+<span class="fc" id="L358">            m_cache.remove(page.getName());</span>
+<span class="fc" id="L359">            m_textCache.remove(page.getName());</span>
+<span class="fc" id="L360">            m_historyCache.remove(page.getName());</span>
+
+<span class="fc" id="L362">            getPageInfoFromCache(page.getName());</span>
+<span class="fc" id="L363">        }</span>
+<span class="fc" id="L364">    }</span>
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public Collection getAllPages() throws ProviderException {
+        Collection all;
+
+<span class="fc bfc" id="L373" title="All 2 branches covered.">        if (m_gotall == false) {</span>
+<span class="fc" id="L374">            all = m_provider.getAllPages();</span>
+
+            // Make sure that all pages are in the cache.
+
+<span class="fc" id="L378">            synchronized (this) {</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">                for (Iterator i = all.iterator(); i.hasNext(); ) {</span>
+<span class="fc" id="L380">                    WikiPage p = (WikiPage) i.next();</span>
+
+<span class="fc" id="L382">                    m_cache.put(new Element(p.getName(), p));</span>
+<span class="fc" id="L383">                }</span>
+
+<span class="fc" id="L385">                m_gotall = true;</span>
+<span class="fc" id="L386">            }</span>
+        } else {
+<span class="fc" id="L388">            List&lt;String&gt; keys = m_cache.getKeysWithExpiryCheck();</span>
+<span class="fc" id="L389">            all = new TreeSet&lt;WikiPage&gt;();</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">            for (String key : keys) {</span>
+<span class="fc" id="L391">                Element element = m_cache.get(key);</span>
+<span class="fc" id="L392">                Object cachedPage = element.getObjectValue();</span>
+<span class="fc bfc" id="L393" title="All 2 branches covered.">                if (cachedPage != null) {</span>
+<span class="fc" id="L394">                    all.add(cachedPage);</span>
+                }
+<span class="fc" id="L396">            }</span>
+        }
+
+<span class="pc bpc" id="L399" title="1 of 2 branches missed.">        if( all.size() &gt;= m_cache.getCacheConfiguration().getMaxEntriesLocalHeap() ) {</span>
+<span class="nc" id="L400">        	log.warn( &quot;seems &quot; + m_cache.getName() + &quot; can't hold all pages from your page repository, &quot; +</span>
+        			  &quot;so we're delegating on the underlying provider instead. Please consider increasing &quot; +
+        			  &quot;your cache sizes on ehcache.xml to avoid this behaviour&quot; );
+<span class="nc" id="L403">        	return m_provider.getAllPages();</span>
+        }
+
+<span class="fc" id="L406">        return all;</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public Collection getAllChangedSince( Date date )
+    {
+<span class="nc" id="L415">        return m_provider.getAllChangedSince( date );</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public int getPageCount()
+        throws ProviderException
+    {
+<span class="nc" id="L425">        return m_provider.getPageCount();</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public Collection findPages( QueryItem[] query )
+    {
+        //
+        //  If the provider is a fast searcher, then
+        //  just pass this request through.
+        //
+<span class="nc" id="L438">        return m_provider.findPages( query );</span>
+
+        // FIXME: Does not implement fast searching
+    }
+
+    //
+    //  FIXME: Kludge: make sure that the page is also parsed and it gets all the
+    //         necessary variables.
+    //
+
+    private void refreshMetadata( WikiPage page )
+    {
+<span class="fc bfc" id="L450" title="All 4 branches covered.">        if( page != null &amp;&amp; !page.hasMetadata() )</span>
+        {
+<span class="fc" id="L452">            RenderingManager mgr = m_engine.getRenderingManager();</span>
+
+            try
+            {
+<span class="fc" id="L456">                String data = m_provider.getPageText(page.getName(), page.getVersion());</span>
+
+<span class="fc" id="L458">                WikiContext ctx = new WikiContext( m_engine, page );</span>
+<span class="fc" id="L459">                MarkupParser parser = mgr.getParser( ctx, data );</span>
+
+<span class="fc" id="L461">                parser.parse();</span>
+            }
+<span class="nc" id="L463">            catch( Exception ex )</span>
+            {
+<span class="nc" id="L465">                log.debug(&quot;Failed to retrieve variables for wikipage &quot;+page);</span>
+<span class="fc" id="L466">            }</span>
+        }
+<span class="fc" id="L468">    }</span>
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public WikiPage getPageInfo( String pageName, int version ) throws ProviderException
+    {
+<span class="fc" id="L476">        WikiPage page = null;</span>
+<span class="fc" id="L477">        WikiPage cached = getPageInfoFromCache( pageName );</span>
+
+<span class="fc bfc" id="L479" title="All 2 branches covered.">        int latestcached = (cached != null) ? cached.getVersion() : Integer.MIN_VALUE;</span>
+
+<span class="fc bfc" id="L481" title="All 4 branches covered.">        if( version == WikiPageProvider.LATEST_VERSION || version == latestcached )</span>
+        {
+<span class="fc bfc" id="L483" title="All 2 branches covered.">            if( cached == null )</span>
+            {
+<span class="fc" id="L485">                WikiPage data = m_provider.getPageInfo( pageName, version );</span>
+
+<span class="pc bpc" id="L487" title="1 of 2 branches missed.">                if( data != null )</span>
+                {
+<span class="nc" id="L489">                    m_cache.put(new Element(pageName, data));</span>
+                }
+<span class="fc" id="L491">                page = data;</span>
+<span class="fc" id="L492">            }</span>
+            else
+            {
+<span class="fc" id="L495">                page = cached;</span>
+            }
+        }
+        else
+        {
+            // We do not cache old versions.
+<span class="fc" id="L501">            page = m_provider.getPageInfo( pageName, version );</span>
+            //refreshMetadata( page );
+        }
+
+<span class="fc" id="L505">        refreshMetadata( page );</span>
+
+<span class="fc" id="L507">        return page;</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    @Override
+    public List&lt; WikiPage &gt; getVersionHistory(String pageName) throws ProviderException {
+<span class="fc" id="L516">        List&lt; WikiPage &gt; history = null;</span>
+
+<span class="pc bpc" id="L518" title="1 of 2 branches missed.">        if (pageName == null) return null;</span>
+<span class="fc" id="L519">        Element element = m_historyCache.get(pageName);</span>
+
+<span class="pc bpc" id="L521" title="1 of 2 branches missed.">        if (element != null) {</span>
+<span class="nc" id="L522">            m_historyCacheHits++;</span>
+<span class="nc" id="L523">            history = ( List&lt; WikiPage &gt; )element.getObjectValue();</span>
+        } else {
+<span class="fc" id="L525">            history = m_provider.getVersionHistory(pageName);</span>
+<span class="fc" id="L526">            m_historyCache.put( new Element( pageName, history ));</span>
+<span class="fc" id="L527">            m_historyCacheMisses++;</span>
+        }
+
+<span class="fc" id="L530">        return history;</span>
+    }
+
+    /**
+     * Gets the provider class name, and cache statistics (misscount and hitcount of page cache and history cache).
+     *
+     * @return A plain string with all the above mentioned values.
+     */
+    @Override
+    public synchronized String getProviderInfo()
+    {
+<span class="nc" id="L541">        return &quot;Real provider: &quot;+m_provider.getClass().getName()+</span>
+                &quot;. Cache misses: &quot;+m_cacheMisses+
+                &quot;. Cache hits: &quot;+m_cacheHits+
+                &quot;. History cache hits: &quot;+m_historyCacheHits+
+                &quot;. History cache misses: &quot;+m_historyCacheMisses;
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void deleteVersion( String pageName, int version )
+        throws ProviderException
+    {
+        //
+        //  Luckily, this is such a rare operation it is okay
+        //  to synchronize against the whole thing.
+        //
+<span class="fc" id="L559">        synchronized( this )</span>
+        {
+<span class="fc" id="L561">            WikiPage cached = getPageInfoFromCache( pageName );</span>
+
+<span class="pc bpc" id="L563" title="1 of 2 branches missed.">            int latestcached = (cached != null) ? cached.getVersion() : Integer.MIN_VALUE;</span>
+
+            //
+            //  If we have this version cached, remove from cache.
+            //
+<span class="pc bpc" id="L568" title="1 of 4 branches missed.">            if( version == WikiPageProvider.LATEST_VERSION ||</span>
+                version == latestcached )
+            {
+<span class="fc" id="L571">                m_cache.remove(pageName);</span>
+<span class="fc" id="L572">                m_textCache.remove(pageName);</span>
+            }
+
+<span class="fc" id="L575">            m_provider.deleteVersion( pageName, version );</span>
+<span class="fc" id="L576">            m_historyCache.remove(pageName);</span>
+<span class="fc" id="L577">        }</span>
+<span class="fc" id="L578">    }</span>
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void deletePage( String pageName )
+        throws ProviderException
+    {
+        //
+        //  See note in deleteVersion().
+        //
+<span class="fc" id="L590">        synchronized(this)</span>
+        {
+<span class="fc" id="L592">            m_cache.put(new Element(pageName, null));</span>
+<span class="fc" id="L593">            m_textCache.put(new Element( pageName, null ));</span>
+<span class="fc" id="L594">            m_historyCache.put(new Element(pageName, null));</span>
+<span class="fc" id="L595">            m_provider.deletePage(pageName);</span>
+<span class="fc" id="L596">        }</span>
+<span class="fc" id="L597">    }</span>
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void movePage(String from, String to) throws ProviderException {
+<span class="fc" id="L604">        m_provider.movePage(from, to);</span>
+
+<span class="fc" id="L606">        synchronized (this) {</span>
+            // Clear any cached version of the old page and new page
+<span class="fc" id="L608">            m_cache.remove(from);</span>
+<span class="fc" id="L609">            m_textCache.remove(from);</span>
+<span class="fc" id="L610">            m_historyCache.remove(from);</span>
+<span class="fc" id="L611">            log.debug(&quot;Removing to page &quot; + to + &quot; from cache&quot;);</span>
+<span class="fc" id="L612">            m_cache.remove(to);</span>
+<span class="fc" id="L613">            m_textCache.remove(to);</span>
+<span class="fc" id="L614">            m_historyCache.remove(to);</span>
+<span class="fc" id="L615">        }</span>
+<span class="fc" id="L616">    }</span>
+
+    /**
+     *  Returns the actual used provider.
+     *  @since 2.0
+     *  @return The real provider.
+     */
+    public WikiPageProvider getRealProvider()
+    {
+<span class="fc" id="L625">        return m_provider;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

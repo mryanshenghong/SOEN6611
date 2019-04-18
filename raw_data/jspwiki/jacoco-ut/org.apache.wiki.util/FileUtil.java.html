@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">FileUtil.java</span></div><h1>FileUtil.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.   
+ */
+package org.apache.wiki.util;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
+
+import org.apache.log4j.Logger;
+
+/**
+ *  Generic utilities related to file and stream handling.
+ */
+public final class FileUtil
+{
+    /** Size of the buffer used when copying large chunks of data. */
+    private static final int      BUFFER_SIZE = 4096;
+<span class="fc" id="L50">    private static final Logger   log         = Logger.getLogger(FileUtil.class);</span>
+
+    /**
+     *  Private constructor prevents instantiation.
+     */
+    private FileUtil()
+    {}
+
+    /**
+     *  Makes a new temporary file and writes content into it. The temporary
+     *  file is created using &lt;code&gt;File.createTempFile()&lt;/code&gt;, and the usual
+     *  semantics apply.  The files are not deleted automatically in exit.
+     *
+     *  @param content Initial content of the temporary file.
+     *  @param encoding Encoding to use.
+     *  @return The handle to the new temporary file
+     *  @throws IOException If the content creation failed.
+     *  @see java.io.File#createTempFile(String,String,File)
+     */
+    public static File newTmpFile( String content, String encoding )
+        throws IOException
+    {
+<span class="fc" id="L72">        Writer out = null;</span>
+<span class="fc" id="L73">        Reader in  = null;</span>
+<span class="fc" id="L74">        File   f   = null;</span>
+
+        try
+        {
+<span class="fc" id="L78">            f = File.createTempFile( &quot;jspwiki&quot;, null );</span>
+
+<span class="fc" id="L80">            in = new StringReader( content );</span>
+
+<span class="fc" id="L82">            out = new OutputStreamWriter( new FileOutputStream( f ),</span>
+                                          encoding );
+
+<span class="fc" id="L85">            copyContents( in, out );</span>
+        }
+        finally
+        {
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">            if( in  != null ) in.close();</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">            if( out != null ) out.close();</span>
+        }
+
+<span class="fc" id="L93">        return f;</span>
+    }
+
+    /**
+     *  Creates a new temporary file using the default encoding
+     *  of ISO-8859-1 (Latin1).
+     *
+     *  @param content The content to put into the file.
+     *  @throws IOException If writing was unsuccessful.
+     *  @return A handle to the newly created file.
+     *  @see #newTmpFile( String, String )
+     *  @see java.io.File#createTempFile(String,String,File)
+     */
+    public static File newTmpFile( String content )
+        throws IOException
+    {
+<span class="fc" id="L109">        return newTmpFile( content, &quot;ISO-8859-1&quot; );</span>
+    }
+
+    /**
+     *  Runs a simple command in given directory.
+     *  The environment is inherited from the parent process (e.g. the
+     *  one in which this Java VM runs).
+     *
+     *  @return Standard output from the command.
+     *  @param  command The command to run
+     *  @param  directory The working directory to run the command in
+     *  @throws IOException If the command failed
+     *  @throws InterruptedException If the command was halted
+     */
+    public static String runSimpleCommand( String command, String directory )
+        throws IOException,
+               InterruptedException
+    {
+<span class="nc" id="L127">    	StringBuilder result = new StringBuilder();</span>
+
+<span class="nc" id="L129">        log.info(&quot;Running simple command &quot;+command+&quot; in &quot;+directory);</span>
+
+<span class="nc" id="L131">        Process process = Runtime.getRuntime().exec( command, null, new File(directory) );</span>
+
+<span class="nc" id="L133">        BufferedReader stdout = null;</span>
+<span class="nc" id="L134">        BufferedReader stderr = null;</span>
+
+        try
+        {
+<span class="nc" id="L138">            stdout = new BufferedReader( new InputStreamReader(process.getInputStream()) );</span>
+<span class="nc" id="L139">            stderr = new BufferedReader( new InputStreamReader(process.getErrorStream()) );</span>
+
+            String line;
+
+<span class="nc bnc" id="L143" title="All 2 branches missed.">            while( (line = stdout.readLine()) != null )</span>
+            {
+<span class="nc" id="L145">                result.append( line+&quot;\n&quot;);</span>
+            }
+
+<span class="nc" id="L148">            StringBuilder error = new StringBuilder();</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">            while( (line = stderr.readLine()) != null )</span>
+            {
+<span class="nc" id="L151">                error.append( line+&quot;\n&quot;);</span>
+            }
+
+<span class="nc bnc" id="L154" title="All 2 branches missed.">            if( error.length() &gt; 0 )</span>
+            {
+<span class="nc" id="L156">                log.error(&quot;Command failed, error stream is: &quot;+error);</span>
+            }
+
+<span class="nc" id="L159">            process.waitFor();</span>
+
+        }
+        finally
+        {
+            // we must close all by exec(..) opened streams: http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4784692
+<span class="nc" id="L165">            process.getInputStream().close();</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">            if( stdout != null ) stdout.close();</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            if( stderr != null ) stderr.close();</span>
+        }
+
+<span class="nc" id="L170">        return result.toString();</span>
+    }
+
+
+    /**
+     *  Just copies all characters from &lt;I&gt;in&lt;/I&gt; to &lt;I&gt;out&lt;/I&gt;.  The copying
+     *  is performed using a buffer of bytes.
+     *
+     *  @since 1.5.8
+     *  @param in The reader to copy from
+     *  @param out The reader to copy to
+     *  @throws IOException If reading or writing failed.
+     */
+    public static void copyContents( Reader in, Writer out )
+        throws IOException
+    {
+<span class="fc" id="L186">        char[] buf = new char[BUFFER_SIZE];</span>
+<span class="fc" id="L187">        int bytesRead = 0;</span>
+
+<span class="fc bfc" id="L189" title="All 2 branches covered.">        while ((bytesRead = in.read(buf)) &gt; 0)</span>
+        {
+<span class="fc" id="L191">            out.write(buf, 0, bytesRead);</span>
+        }
+
+<span class="fc" id="L194">        out.flush();</span>
+<span class="fc" id="L195">    }</span>
+
+    /**
+     *  Just copies all bytes from &lt;I&gt;in&lt;/I&gt; to &lt;I&gt;out&lt;/I&gt;.  The copying is
+     *  performed using a buffer of bytes.
+     *
+     *  @since 1.9.31
+     *  @param in The inputstream to copy from
+     *  @param out The outputstream to copy to
+     *  @throws IOException In case reading or writing fails.
+     */
+    public static void copyContents( InputStream in, OutputStream out )
+        throws IOException
+    {
+<span class="fc" id="L209">        byte[] buf = new byte[BUFFER_SIZE];</span>
+<span class="fc" id="L210">        int bytesRead = 0;</span>
+
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        while ((bytesRead = in.read(buf)) &gt; 0)</span>
+        {
+<span class="fc" id="L214">            out.write(buf, 0, bytesRead);</span>
+        }
+
+<span class="fc" id="L217">        out.flush();</span>
+<span class="fc" id="L218">    }</span>
+
+    /**
+     *  Reads in file contents.
+     *  &lt;P&gt;
+     *  This method is smart and falls back to ISO-8859-1 if the input stream does not
+     *  seem to be in the specified encoding.
+     *
+     *  @param input The InputStream to read from.
+     *  @param encoding The encoding to assume at first.
+     *  @return A String, interpreted in the &quot;encoding&quot;, or, if it fails, in Latin1.
+     *  @throws IOException If the stream cannot be read or the stream cannot be
+     *          decoded (even) in Latin1
+     */
+    public static String readContents( InputStream input, String encoding )
+        throws IOException
+    {
+<span class="fc" id="L235">        ByteArrayOutputStream out = new ByteArrayOutputStream();</span>
+<span class="fc" id="L236">        FileUtil.copyContents( input, out );</span>
+
+<span class="fc" id="L238">        ByteBuffer     bbuf        = ByteBuffer.wrap( out.toByteArray() );</span>
+
+<span class="fc" id="L240">        Charset        cset        = Charset.forName( encoding );</span>
+<span class="fc" id="L241">        CharsetDecoder csetdecoder = cset.newDecoder();</span>
+
+<span class="fc" id="L243">        csetdecoder.onMalformedInput( CodingErrorAction.REPORT );</span>
+<span class="fc" id="L244">        csetdecoder.onUnmappableCharacter( CodingErrorAction.REPORT );</span>
+
+        try
+        {
+<span class="fc" id="L248">            CharBuffer cbuf = csetdecoder.decode( bbuf );</span>
+
+<span class="fc" id="L250">            return cbuf.toString();</span>
+        }
+<span class="fc" id="L252">        catch( CharacterCodingException e )</span>
+        {
+<span class="fc" id="L254">            Charset        latin1    = Charset.forName(&quot;ISO-8859-1&quot;);</span>
+<span class="fc" id="L255">            CharsetDecoder l1decoder = latin1.newDecoder();</span>
+
+<span class="fc" id="L257">            l1decoder.onMalformedInput( CodingErrorAction.REPORT );</span>
+<span class="fc" id="L258">            l1decoder.onUnmappableCharacter( CodingErrorAction.REPORT );</span>
+
+            try
+            {
+<span class="fc" id="L262">                bbuf = ByteBuffer.wrap( out.toByteArray() );</span>
+
+<span class="fc" id="L264">                CharBuffer cbuf = l1decoder.decode( bbuf );</span>
+
+<span class="fc" id="L266">                return cbuf.toString();</span>
+            }
+<span class="nc" id="L268">            catch( CharacterCodingException ex )</span>
+            {
+<span class="nc" id="L270">                throw (CharacterCodingException) ex.fillInStackTrace();</span>
+            }
+        }
+    }
+
+    /**
+     *  Returns the full contents of the Reader as a String.
+     *
+     *  @since 1.5.8
+     *  @param in The reader from which the contents shall be read.
+     *  @return String read from the Reader
+     *  @throws IOException If reading fails.
+     */
+    public static String readContents( Reader in )
+        throws IOException
+    {
+<span class="fc" id="L286">        Writer out = null;</span>
+
+        try
+        {
+<span class="fc" id="L290">            out = new StringWriter();</span>
+
+<span class="fc" id="L292">            copyContents( in, out );</span>
+
+<span class="fc" id="L294">            return out.toString();</span>
+        }
+        finally
+        {
+            try
+            {
+<span class="fc" id="L300">                out.close();</span>
+            }
+<span class="nc" id="L302">            catch( Exception e )</span>
+            {
+<span class="nc" id="L304">                log.error(&quot;Not able to close the stream while reading contents.&quot;);</span>
+<span class="fc" id="L305">            }</span>
+        }
+    }
+
+    /**
+     *  Returns the class and method name (+a line number) in which the
+     *  Throwable was thrown.
+     *
+     *  @param t A Throwable to analyze.
+     *  @return A human-readable string stating the class and method.  Do not rely
+     *          the format to be anything fixed.
+     */
+    public static String getThrowingMethod( Throwable t )
+    {
+<span class="nc" id="L319">        StackTraceElement[] trace = t.getStackTrace();</span>
+<span class="nc" id="L320">        StringBuilder sb = new StringBuilder();</span>
+
+<span class="nc bnc" id="L322" title="All 4 branches missed.">        if( trace == null || trace.length == 0 )</span>
+        {
+<span class="nc" id="L324">            sb.append( &quot;[Stack trace not available]&quot; );</span>
+        }
+        else
+        {
+<span class="nc bnc" id="L328" title="All 2 branches missed.">            sb.append( trace[0].isNativeMethod() ? &quot;native method&quot; : &quot;&quot; );</span>
+<span class="nc" id="L329">            sb.append( trace[0].getClassName() );</span>
+<span class="nc" id="L330">            sb.append(&quot;.&quot;);</span>
+<span class="nc" id="L331">            sb.append(trace[0].getMethodName()+&quot;(), line &quot;+trace[0].getLineNumber());</span>
+        }
+<span class="nc" id="L333">        return sb.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CryptoUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">CryptoUtil.java</span></div><h1>CryptoUtil.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Random;
+
+
+/**
+ * Hashes and verifies salted SHA-1 passwords, which are compliant with RFC
+ * 2307.
+ */
+public final class CryptoUtil
+{
+    private static final String SSHA = &quot;{SSHA}&quot;;
+
+<span class="fc" id="L38">    private static final Random RANDOM = new SecureRandom();</span>
+
+    private static final int DEFAULT_SALT_SIZE = 8;
+
+<span class="fc" id="L42">    private static final Object HELP = &quot;--help&quot;;</span>
+
+<span class="fc" id="L44">    private static final Object HASH = &quot;--hash&quot;;</span>
+
+<span class="fc" id="L46">    private static final Object VERIFY = &quot;--verify&quot;;</span>
+
+    /**
+     * Private constructor to prevent direct instantiation.
+     */
+    private CryptoUtil()
+    {
+    }
+
+    /**
+     * &lt;p&gt;
+     * Convenience method for hashing and verifying salted SHA-1 passwords from
+     * the command line. This method requires &lt;code&gt;commons-codec-1.3.jar&lt;/code&gt;
+     * (or a newer version) to be on the classpath. Command line arguments are
+     * as follows:
+     * &lt;/p&gt;
+     * &lt;ul&gt;
+     * &lt;li&gt;&lt;code&gt;--hash &lt;var&gt;password&lt;/var&gt;&lt;/code&gt; - hashes &lt;var&gt;password&lt;/var&gt;&lt;/code&gt;
+     * and prints a password digest that looks like this: &lt;blockquote&gt;&lt;code&gt;{SSHA}yfT8SRT/WoOuNuA6KbJeF10OznZmb28=&lt;/code&gt;&lt;/blockquote&gt;&lt;/li&gt;
+     * &lt;li&gt;&lt;code&gt;--verify &lt;var&gt;password&lt;/var&gt; &lt;var&gt;digest&lt;/var&gt;&lt;/code&gt; -
+     * verifies &lt;var&gt;password&lt;/var&gt; by extracting the salt from &lt;var&gt;digest&lt;/var&gt;
+     * (which is identical to what is printed by &lt;code&gt;--hash&lt;/code&gt;) and
+     * re-computing the digest again using the password and salt. If the
+     * password supplied is the same as the one used to create the original
+     * digest, &lt;code&gt;true&lt;/code&gt; will be printed; otherwise &lt;code&gt;false&lt;/code&gt;&lt;/li&gt;
+     * &lt;/ul&gt;
+     * &lt;p&gt;For example, one way to use this utility is to change to JSPWiki's &lt;code&gt;build&lt;/code&gt; directory
+     * and type the following command:&lt;/p&gt;
+     * &lt;blockquote&gt;&lt;code&gt;java -cp JSPWiki.jar:../lib/commons-codec-1.3.jar org.apache.wiki.util.CryptoUtil --hash mynewpassword&lt;/code&gt;&lt;/blockquote&gt;
+     * 
+     * @param args arguments for this method as described above
+     * @throws Exception Catches nothing; throws everything up.
+     */
+    public static void main( final String[] args ) throws Exception
+    {
+        // Print help if the user requested it, or if no arguments
+<span class="pc bpc" id="L82" title="4 of 6 branches missed.">        if( args.length == 0 || (args.length == 1 &amp;&amp; HELP.equals( args[0] )) )</span>
+        {
+<span class="nc" id="L84">            System.out.println( &quot;Usage: CryptoUtil [options] &quot; );</span>
+<span class="nc" id="L85">            System.out.println( &quot;   --hash   password             create hash for password&quot; );</span>
+<span class="nc" id="L86">            System.out.println( &quot;   --verify password digest      verify password for digest&quot; );</span>
+<span class="nc" id="L87">            System.exit( 0 );</span>
+        }
+
+        // User wants to hash the password
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        if( HASH.equals( args[0] ) )</span>
+        {
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">            if( args.length &lt; 2 )</span>
+            {
+<span class="nc" id="L95">                throw new IllegalArgumentException( &quot;Error: --hash requires a 'password' argument.&quot; );</span>
+            }
+<span class="fc" id="L97">            final String password = args[1].trim();</span>
+<span class="fc" id="L98">            System.out.println( CryptoUtil.getSaltedPassword( password.getBytes( StandardCharsets.UTF_8 ) ) );</span>
+<span class="fc" id="L99">        }</span>
+
+        // User wants to verify an existing password
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        else if( VERIFY.equals( args[0] ) )</span>
+        {
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">            if( args.length &lt; 3 )</span>
+            {
+<span class="nc" id="L106">                throw new IllegalArgumentException( &quot;Error: --hash requires 'password' and 'digest' arguments.&quot; );</span>
+            }
+<span class="fc" id="L108">            final String password = args[1].trim();</span>
+<span class="fc" id="L109">            final String digest = args[2].trim();</span>
+<span class="fc" id="L110">            System.out.println( CryptoUtil.verifySaltedPassword( password.getBytes( StandardCharsets.UTF_8 ), digest ) );</span>
+<span class="fc" id="L111">        }</span>
+
+        else
+        {
+<span class="nc" id="L115">            System.out.println( &quot;Wrong usage. Try --help.&quot; );</span>
+        }
+<span class="fc" id="L117">    }</span>
+
+    /**
+     * &lt;p&gt;
+     * Creates an RFC 2307-compliant salted, hashed password with the SHA1
+     * MessageDigest algorithm. After the password is digested, the first 20
+     * bytes of the digest will be the actual password hash; the remaining bytes
+     * will be a randomly generated salt of length {@link #DEFAULT_SALT_SIZE},
+     * for example: &lt;blockquote&gt;&lt;code&gt;{SSHA}3cGWem65NCEkF5Ew5AEk45ak8LHUWAwPVXAyyw==&lt;/code&gt;&lt;/blockquote&gt;
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * In layman's terms, the formula is
+     * &lt;code&gt;digest( secret + salt ) + salt&lt;/code&gt;. The resulting digest is
+     * Base64-encoded.
+     * &lt;/p&gt;
+     * &lt;p&gt;
+     * Note that successive invocations of this method with the same password
+     * will result in different hashes! (This, of course, is exactly the point.)
+     * &lt;/p&gt;
+     * 
+     * @param password the password to be digested
+     * @return the Base64-encoded password hash, prepended by
+     *         &lt;code&gt;{SSHA}&lt;/code&gt;.
+     * @throws NoSuchAlgorithmException If your JVM is completely b0rked and does not have SHA.
+     */
+    public static String getSaltedPassword( byte[] password ) throws NoSuchAlgorithmException
+    {
+<span class="fc" id="L144">        byte[] salt = new byte[DEFAULT_SALT_SIZE];</span>
+<span class="fc" id="L145">        RANDOM.nextBytes( salt );</span>
+<span class="fc" id="L146">        return getSaltedPassword( password, salt );</span>
+    }
+
+    /**
+     * &lt;p&gt;
+     * Helper method that creates an RFC 2307-compliant salted, hashed password with the SHA1
+     * MessageDigest algorithm. After the password is digested, the first 20
+     * bytes of the digest will be the actual password hash; the remaining bytes
+     * will be the salt. Thus, supplying a password &lt;code&gt;testing123&lt;/code&gt;
+     * and a random salt &lt;code&gt;foo&lt;/code&gt; produces the hash:
+     * &lt;/p&gt;
+     * &lt;blockquote&gt;&lt;code&gt;{SSHA}yfT8SRT/WoOuNuA6KbJeF10OznZmb28=&lt;/code&gt;&lt;/blockquote&gt;
+     * &lt;p&gt;
+     * In layman's terms, the formula is
+     * &lt;code&gt;digest( secret + salt ) + salt&lt;/code&gt;. The resulting digest is Base64-encoded.&lt;/p&gt;
+     * 
+     * @param password the password to be digested
+     * @param salt the random salt
+     * @return the Base64-encoded password hash, prepended by &lt;code&gt;{SSHA}&lt;/code&gt;.
+     * @throws NoSuchAlgorithmException If your JVM is totally b0rked and does not have SHA1.
+     */
+    protected static String getSaltedPassword( byte[] password, byte[] salt ) throws NoSuchAlgorithmException
+    {
+<span class="fc" id="L169">        MessageDigest digest = MessageDigest.getInstance( &quot;SHA&quot; );</span>
+<span class="fc" id="L170">        digest.update( password );</span>
+<span class="fc" id="L171">        byte[] hash = digest.digest( salt );</span>
+
+        // Create an array with the hash plus the salt
+<span class="fc" id="L174">        byte[] all = new byte[hash.length + salt.length];</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        for( int i = 0; i &lt; hash.length; i++ )</span>
+        {
+<span class="fc" id="L177">            all[i] = hash[i];</span>
+        }
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        for( int i = 0; i &lt; salt.length; i++ )</span>
+        {
+<span class="fc" id="L181">            all[hash.length + i] = salt[i];</span>
+        }
+<span class="fc" id="L183">        byte[] base64 = Base64.getEncoder().encode( all );</span>
+        
+<span class="fc" id="L185">        return SSHA + new String( base64, StandardCharsets.UTF_8 );</span>
+    }
+
+    /**
+     *  Compares a password to a given entry and returns true, if it matches.
+     *  
+     *  @param password The password in bytes.
+     *  @param entry The password entry, typically starting with {SSHA}.
+     *  @return True, if the password matches.
+     *  @throws NoSuchAlgorithmException If there is no SHA available.
+     */
+    public static boolean verifySaltedPassword( byte[] password, String entry ) throws NoSuchAlgorithmException
+    {
+        // First, extract everything after {SSHA} and decode from Base64
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        if( !entry.startsWith( SSHA ) )</span>
+        {
+<span class="fc" id="L201">            throw new IllegalArgumentException( &quot;Hash not prefixed by {SSHA}; is it really a salted hash?&quot; );</span>
+        }
+<span class="fc" id="L203">        byte[] challenge = Base64.getDecoder().decode( entry.substring( 6 ).getBytes( StandardCharsets.UTF_8 ) );</span>
+
+        // Extract the password hash and salt
+<span class="fc" id="L206">        byte[] passwordHash = extractPasswordHash( challenge );</span>
+<span class="fc" id="L207">        byte[] salt = extractSalt( challenge );</span>
+
+        // Re-create the hash using the password and the extracted salt
+<span class="fc" id="L210">        MessageDigest digest = MessageDigest.getInstance( &quot;SHA&quot; );</span>
+<span class="fc" id="L211">        digest.update( password );</span>
+<span class="fc" id="L212">        byte[] hash = digest.digest( salt );</span>
+
+        // See if our extracted hash matches what we just re-created
+<span class="fc" id="L215">        return Arrays.equals( passwordHash, hash );</span>
+    }
+
+    /**
+     * Helper method that extracts the hashed password fragment from a supplied salted SHA digest
+     * by taking all of the characters before position 20.
+     * 
+     * @param digest the salted digest, which is assumed to have been
+     *            previously decoded from Base64.
+     * @return the password hash
+     * @throws IllegalArgumentException if the length of the supplied digest is
+     *             less than or equal to 20 bytes
+     */
+    protected static byte[] extractPasswordHash( byte[] digest ) throws IllegalArgumentException
+    {
+<span class="pc bpc" id="L230" title="1 of 2 branches missed.">        if( digest.length &lt; 20 )</span>
+        {
+<span class="nc" id="L232">            throw new IllegalArgumentException( &quot;Hash was less than 20 characters; could not extract password hash!&quot; );</span>
+        }
+
+        // Extract the password hash
+<span class="fc" id="L236">        byte[] hash = new byte[20];</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        for( int i = 0; i &lt; 20; i++ )</span>
+        {
+<span class="fc" id="L239">            hash[i] = digest[i];</span>
+        }
+
+<span class="fc" id="L242">        return hash;</span>
+    }
+
+    /**
+     * Helper method that extracts the salt from supplied salted digest by taking all of the
+     * characters at position 20 and higher.
+     * 
+     * @param digest the salted digest, which is assumed to have been previously
+     *            decoded from Base64.
+     * @return the salt
+     * @throws IllegalArgumentException if the length of the supplied digest is
+     *             less than or equal to 20 bytes
+     */
+    protected static byte[] extractSalt( byte[] digest ) throws IllegalArgumentException
+    {
+<span class="pc bpc" id="L257" title="1 of 2 branches missed.">        if( digest.length &lt;= 20 )</span>
+        {
+<span class="nc" id="L259">            throw new IllegalArgumentException( &quot;Hash was less than 21 characters; we found no salt!&quot; );</span>
+        }
+
+        // Extract the salt
+<span class="fc" id="L263">        byte[] salt = new byte[digest.length - 20];</span>
+<span class="fc bfc" id="L264" title="All 2 branches covered.">        for( int i = 20; i &lt; digest.length; i++ )</span>
+        {
+<span class="fc" id="L266">            salt[i - 20] = digest[i];</span>
+        }
+
+<span class="fc" id="L269">        return salt;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

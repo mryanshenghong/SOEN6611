@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClassUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">ClassUtil.java</span></div><h1>ClassUtil.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.net.JarURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.jdom2.Element;
+
+/**
+ *  Contains useful utilities for class file manipulation.  This is a static class,
+ *  so there is no need to instantiate it.
+ *
+ *  @since 2.1.29.
+ */
+public final class ClassUtil {
+
+<span class="fc" id="L50">    private static final Logger log = Logger.getLogger(ClassUtil.class);</span>
+    /**
+     *  The location of the classmappings.xml document. It will be searched for
+     *  in the classpath.  It's value is &quot;{@value}&quot;.
+     */
+    public  static final String MAPPINGS = &quot;ini/classmappings.xml&quot;;
+    
+<span class="fc" id="L57">    private static Map&lt;String, String&gt; c_classMappings = new ConcurrentHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L59">    private static boolean classLoaderSetup = false;</span>
+<span class="fc" id="L60">    private static ClassLoader loader = null;</span>
+
+
+    /**
+     *  Initialize the class mappings document.
+     */
+    static {
+<span class="fc" id="L67">        List&lt; Element &gt; nodes = XmlUtil.parse( MAPPINGS, &quot;/classmappings/mapping&quot; );</span>
+
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">        if( nodes.size() &gt; 0 ) {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            for( Iterator&lt; Element &gt; i = nodes.iterator(); i.hasNext(); ) {</span>
+<span class="fc" id="L71">                Element f = i.next();</span>
+            
+<span class="fc" id="L73">                String key = f.getChildText(&quot;requestedClass&quot;);</span>
+<span class="fc" id="L74">                String className = f.getChildText(&quot;mappedClass&quot;);</span>
+                
+<span class="fc" id="L76">                c_classMappings.put( key, className );</span>
+                
+<span class="fc" id="L78">                log.debug(&quot;Mapped class '&quot;+key+&quot;' to class '&quot;+className+&quot;'&quot;);</span>
+<span class="fc" id="L79">            }</span>
+        } else {
+<span class="nc" id="L81">            log.info(&quot;Didn't find class mapping document in &quot;+MAPPINGS);</span>
+        }
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Private constructor to prevent direct instantiation.
+     */
+    private ClassUtil() {}
+    
+    /**
+     *  Attempts to find a class from a collection of packages.  This will first
+     *  attempt to find the class based on just the className parameter, but
+     *  should that fail, will iterate through the &quot;packages&quot; -list, prefixes
+     *  the package name to the className, and then tries to find the class
+     *  again.
+     *
+     * @param packages A List of Strings, containing different package names.
+     *  @param className The name of the class to find.
+     * @return The class, if it was found.
+     *  @throws ClassNotFoundException if this particular class cannot be found
+     *          from the list.
+     */
+    public static Class&lt;?&gt; findClass( List&lt; String &gt; packages,  List&lt; String &gt; externaljars, String className ) throws ClassNotFoundException {
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (!classLoaderSetup) {</span>
+<span class="fc" id="L105">            loader = setupClassLoader(externaljars);</span>
+        }
+
+        try {
+<span class="fc" id="L109">            return loader.loadClass( className );</span>
+<span class="fc" id="L110">        } catch( ClassNotFoundException e ) {</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            for( Iterator&lt; String &gt; i = packages.iterator(); i.hasNext(); ) {</span>
+<span class="fc" id="L112">                String packageName = i.next();</span>
+                try {
+<span class="fc" id="L114">                    return loader.loadClass( packageName + &quot;.&quot; + className );</span>
+<span class="fc" id="L115">                } catch( ClassNotFoundException ex ) {</span>
+                    // This is okay, we go to the next package.
+                }
+<span class="fc" id="L118">            }</span>
+
+        }
+
+<span class="fc" id="L122">        throw new ClassNotFoundException( &quot;Class '&quot; + className + &quot;' not found in search path!&quot; );</span>
+    }
+
+    /**
+     * Setup the plugin classloader, checking if there are external JARS to add.
+     * 
+     * @param externaljars external jars to load into the classloader.
+     * @return the classloader that can load classes from the configured external jars or, if not specified, the classloader that loaded this class.
+     */
+    private static ClassLoader setupClassLoader(List&lt;String&gt; externaljars) {
+<span class="fc" id="L132">        classLoaderSetup = true;</span>
+<span class="fc" id="L133">        log.info(&quot;setting up classloaders for external (plugin) jars&quot;);</span>
+<span class="pc bpc" id="L134" title="1 of 2 branches missed.">        if (externaljars.size() == 0) {</span>
+<span class="fc" id="L135">            log.info(&quot;no external jars configured, using standard classloading&quot;);</span>
+<span class="fc" id="L136">            return ClassUtil.class.getClassLoader();</span>
+        }
+<span class="nc" id="L138">        URL[] urls = new URL[externaljars.size()];</span>
+<span class="nc" id="L139">        int i = 0;</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        for( String externaljar : externaljars ) {</span>
+            try {
+<span class="nc" id="L142">                File jarFile = new File( externaljar );</span>
+<span class="nc" id="L143">                URL ucl = jarFile.toURI().toURL();</span>
+<span class="nc" id="L144">                urls[i++] = ucl;</span>
+<span class="nc" id="L145">                log.info(&quot;added &quot; + ucl + &quot; to list of external jars&quot;);</span>
+<span class="nc" id="L146">            } catch (MalformedURLException e) {</span>
+<span class="nc" id="L147">                log.error(&quot;exception (&quot; + e.getMessage() +&quot;) while setting up classloaders for external jar:&quot; + externaljar + &quot;, continuing without external jars.&quot;);</span>
+<span class="nc" id="L148">            }</span>
+<span class="nc" id="L149">        }</span>
+        
+<span class="nc bnc" id="L151" title="All 2 branches missed.">        if( i == 0 ) {</span>
+<span class="nc" id="L152">            log.error( &quot;all external jars threw an exception while setting up classloaders for them, continuing with standard classloading. &quot; + </span>
+                       &quot;See https://jspwiki-wiki.apache.org/Wiki.jsp?page=InstallingPlugins for help on how to install custom plugins.&quot; );
+<span class="nc" id="L154">            return ClassUtil.class.getClassLoader();</span>
+        }
+        
+<span class="nc" id="L157">        return new URLClassLoader(urls, ClassUtil.class.getClassLoader());</span>
+    }
+
+    /**
+     *
+     *  It will first attempt to instantiate the class directly from the className,
+     *  and will then try to prefix it with the packageName.
+     *
+     *  @param packageName A package name (such as &quot;org.apache.wiki.plugins&quot;).
+     *  @param className The class name to find.
+     *  @return The class, if it was found.
+     *  @throws ClassNotFoundException if this particular class cannot be found.
+     */
+
+    public static Class&lt;?&gt; findClass(String packageName, String className) throws ClassNotFoundException {
+        try {
+<span class="fc" id="L173">            return ClassUtil.class.getClassLoader().loadClass(className);</span>
+<span class="fc" id="L174">        } catch (ClassNotFoundException e) {</span>
+<span class="fc" id="L175">            return ClassUtil.class.getClassLoader().loadClass(packageName + &quot;.&quot; + className);</span>
+        }
+    }
+    
+    /**
+     * Lists all the files in classpath under a given package.
+     * 
+     * @param rootPackage the base package. Can be {code null}.
+     * @return all files entries in classpath under the given package
+     */
+    public static List&lt; String &gt; classpathEntriesUnder( final String rootPackage ) 
+    {
+<span class="fc" id="L187">        List&lt; String &gt; results = new ArrayList&lt; &gt;();</span>
+<span class="fc" id="L188">        Enumeration&lt; URL &gt; en = null;</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">        if( StringUtils.isNotEmpty( rootPackage ) ) {</span>
+            try
+            {
+<span class="fc" id="L192">                en = ClassUtil.class.getClassLoader().getResources( rootPackage );</span>
+            }
+<span class="nc" id="L194">            catch( IOException e )</span>
+            {
+<span class="nc" id="L196">                log.error( e.getMessage(), e );</span>
+<span class="fc" id="L197">            }</span>
+        }
+        
+<span class="fc bfc" id="L200" title="All 4 branches covered.">        while( en != null &amp;&amp; en.hasMoreElements() )</span>
+        {
+<span class="fc" id="L202">            URL url = en.nextElement();</span>
+            try
+            {
+<span class="fc bfc" id="L205" title="All 2 branches covered.">                if( &quot;jar&quot;.equals( url.getProtocol() ) ) </span>
+                {
+<span class="fc" id="L207">                    jarEntriesUnder( results, ( JarURLConnection )url.openConnection(), rootPackage );</span>
+                } 
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">                else if( &quot;file&quot;.equals( url.getProtocol() ) ) </span>
+                {
+<span class="fc" id="L211">                    fileEntriesUnder( results, new File( url.getFile() ), rootPackage );</span>
+                }
+                
+            }
+<span class="nc" id="L215">            catch (IOException ioe)</span>
+            {
+<span class="nc" id="L217">                log.error( ioe.getMessage(), ioe );</span>
+<span class="fc" id="L218">            }</span>
+<span class="fc" id="L219">        }</span>
+<span class="fc" id="L220">        return results;</span>
+    }
+    
+    /**
+     * Searchs for all the files in classpath under a given package, for a given {@link File}. If the 
+     * {@link File} is a directory all files inside it are stored, otherwise the {@link File} itself is
+     * stored
+     * 
+     * @param results collection in which the found entries are stored
+     * @param file given {@link File} to search in.
+     * @param rootPackage base package.
+     */
+    static void fileEntriesUnder( List&lt; String &gt; results, File file, String rootPackage ) 
+    {
+<span class="fc" id="L234">        log.debug( &quot;scanning [&quot; + file.getName() +&quot;]&quot; );</span>
+<span class="pc bpc" id="L235" title="1 of 2 branches missed.">        if( file.isDirectory() ) {</span>
+<span class="fc" id="L236">            Iterator&lt; File &gt; files = FileUtils.iterateFiles( file, null, true );</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">            while( files.hasNext() ) </span>
+            {
+<span class="fc" id="L239">                File subfile = files.next();</span>
+                // store an entry similar to the jarSearch(..) below ones
+<span class="fc" id="L241">                String entry = StringUtils.replace( subfile.getAbsolutePath(), file.getAbsolutePath() + File.separatorChar, StringUtils.EMPTY );</span>
+<span class="fc" id="L242">                results.add( rootPackage + &quot;/&quot; + entry );</span>
+<span class="fc" id="L243">            }</span>
+<span class="fc" id="L244">        } else {</span>
+<span class="nc" id="L245">            results.add( file.getName() );</span>
+        }
+<span class="fc" id="L247">    }</span>
+    
+    /**
+     * Searchs for all the files in classpath under a given package, for a given {@link JarURLConnection}.
+     * 
+     * @param results collection in which the found entries are stored
+     * @param jurlcon given {@link JarURLConnection} to search in.
+     * @param rootPackage base package.
+     */
+    static void jarEntriesUnder( List&lt; String &gt; results, JarURLConnection jurlcon, String rootPackage ) {
+<span class="fc" id="L257">        try( JarFile jar = jurlcon.getJarFile() ) {</span>
+<span class="fc" id="L258">            log.debug( &quot;scanning [&quot; + jar.getName() +&quot;]&quot; );</span>
+<span class="fc" id="L259">            Enumeration&lt; JarEntry &gt; entries = jar.entries();</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">            while( entries.hasMoreElements() ) {</span>
+<span class="fc" id="L261">                JarEntry entry = entries.nextElement();</span>
+<span class="fc bfc" id="L262" title="All 4 branches covered.">                if( entry.getName().startsWith( rootPackage ) &amp;&amp; !entry.isDirectory() ) {</span>
+<span class="fc" id="L263">                    results.add( entry.getName() );</span>
+                }
+<span class="fc" id="L265">            }</span>
+<span class="nc" id="L266">        } catch( IOException ioe ) {</span>
+<span class="nc" id="L267">            log.error( ioe.getMessage(), ioe );</span>
+<span class="fc" id="L268">        }</span>
+<span class="fc" id="L269">    }</span>
+    
+    /**
+     *  This method is used to locate and instantiate a mapped class.
+     *  You may redefine anything in the resource file which is located in your classpath
+     *  under the name &lt;code&gt;ClassUtil.MAPPINGS ({@value #MAPPINGS})&lt;/code&gt;.
+     *  &lt;p&gt;
+     *  This is an extremely powerful system, which allows you to remap many of
+     *  the JSPWiki core classes to your own class.  Please read the documentation
+     *  included in the default &lt;code&gt;{@value #MAPPINGS}&lt;/code&gt; file to see
+     *  how this method works. 
+     *  
+     *  @param requestedClass The name of the class you wish to instantiate.
+     *  @return An instantiated Object.
+     *  @throws IllegalArgumentException If the class cannot be found or instantiated. 
+     *  @throws ReflectiveOperationException If the class cannot be found or instantiated.
+     *  @since 2.5.40
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public static &lt; T &gt; T getMappedObject( String requestedClass )
+        throws ReflectiveOperationException, IllegalArgumentException
+    {
+<span class="fc" id="L291">        Object[] initargs = {};</span>
+<span class="fc" id="L292">        return ( T )getMappedObject(requestedClass, initargs );</span>
+    }
+
+    /**
+     *  This method is used to locate and instantiate a mapped class.
+     *  You may redefine anything in the resource file which is located in your classpath
+     *  under the name &lt;code&gt;{@value #MAPPINGS}&lt;/code&gt;.
+     *  &lt;p&gt;
+     *  This is an extremely powerful system, which allows you to remap many of
+     *  the JSPWiki core classes to your own class.  Please read the documentation
+     *  included in the default &lt;code&gt;{@value #MAPPINGS}&lt;/code&gt; file to see
+     *  how this method works. 
+     *  &lt;p&gt;
+     *  This method takes in an object array for the constructor arguments for classes
+     *  which have more than two constructors.
+     *  
+     *  @param requestedClass The name of the class you wish to instantiate.
+     *  @param initargs The parameters to be passed to the constructor. May be &lt;code&gt;null&lt;/code&gt;.
+     *  @return An instantiated Object.
+     *  @throws IllegalArgumentException If the class cannot be found or instantiated. 
+     *  @throws ReflectiveOperationException If the class cannot be found or instantiated.
+     *  @since 2.5.40
+     */
+    @SuppressWarnings( &quot;unchecked&quot; )
+    public static &lt; T &gt; T getMappedObject( String requestedClass, Object... initargs )
+        throws ReflectiveOperationException, IllegalArgumentException
+    {
+<span class="fc" id="L319">        Class&lt;?&gt; cl = getMappedClass( requestedClass );</span>
+<span class="fc" id="L320">        Constructor&lt;?&gt;[] ctors = cl.getConstructors();</span>
+        
+        //
+        //  Try to find the proper constructor by comparing the
+        //  initargs array classes and the constructor types.
+        //
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        for( int c = 0; c &lt; ctors.length; c++ )</span>
+        {
+<span class="fc" id="L328">            Class&lt;?&gt;[] params = ctors[c].getParameterTypes();</span>
+            
+<span class="fc bfc" id="L330" title="All 2 branches covered.">            if( params.length == initargs.length )</span>
+            {
+<span class="pc bfc" id="L332" title="All 2 branches covered.">                for( int arg = 0; arg &lt; initargs.length; arg++ )</span>
+                {
+<span class="pc bpc" id="L334" title="1 of 2 branches missed.">                    if( params[arg].isAssignableFrom(initargs[arg].getClass()))</span>
+                    {
+                        //
+                        //  Ha, found it!  Instantiating and returning...
+                        //
+<span class="fc" id="L339">                        return ( T )ctors[c].newInstance(initargs);</span>
+                    }
+                }
+            }
+        }
+        
+        //
+        //  No arguments, so we can just call a default constructor and ignore the arguments.
+        //
+<span class="fc" id="L348">        return ( T )cl.newInstance();</span>
+    }
+
+    /**
+     *  Finds a mapped class from the c_classMappings list.  If there is no
+     *  mappped class, will use the requestedClass.
+     *  
+     *  @param requestedClass
+     *  @return A Class object which you can then instantiate.
+     *  @throws ClassNotFoundException
+     */
+    private static Class&lt; ? &gt; getMappedClass( String requestedClass ) throws ClassNotFoundException {
+<span class="fc" id="L360">        String mappedClass = c_classMappings.get( requestedClass );</span>
+        
+<span class="fc bfc" id="L362" title="All 2 branches covered.">        if( mappedClass == null )</span>
+        {
+<span class="fc" id="L364">            mappedClass = requestedClass;</span>
+        }
+        
+<span class="fc" id="L367">        Class&lt; ? &gt; cl = Class.forName(mappedClass);</span>
+        
+<span class="fc" id="L369">        return cl;</span>
+    }
+    
+    /**
+     * checks if {@code srcClassName} is a subclass of {@code parentClassname}.
+     * 
+     * @param srcClassName expected subclass.
+     * @param parentClassName expected parent class.
+     * @return {@code true} if {@code srcClassName} is a subclass of {@code parentClassname}, {@code false} otherwise.
+     */
+    public static boolean assignable( String srcClassName, String parentClassName ) {
+        try {
+<span class="fc" id="L381">            Class&lt; ? &gt; src = Class.forName( srcClassName );</span>
+<span class="fc" id="L382">            Class&lt; ? &gt; parent = Class.forName( parentClassName );</span>
+<span class="fc" id="L383">            return parent.isAssignableFrom( src );</span>
+<span class="fc" id="L384">        } catch( Exception e ) {</span>
+<span class="fc" id="L385">            log.error( e.getMessage(), e );</span>
+        }
+<span class="fc" id="L387">        return false;</span>
+    }
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

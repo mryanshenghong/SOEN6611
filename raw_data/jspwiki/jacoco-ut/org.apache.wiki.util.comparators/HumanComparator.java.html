@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HumanComparator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util.comparators</a> &gt; <span class="el_source">HumanComparator.java</span></div><h1>HumanComparator.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+
+package org.apache.wiki.util.comparators;
+
+import java.util.Comparator;
+
+import org.apache.commons.lang.StringUtils;
+
+/**
+ * A comparator that sorts Strings using &quot;human&quot; ordering, including decimal
+ * ordering. Only works for languages where every character is lexigraphically
+ * distinct and correctly unicode ordered (e.g. English). Other languages should use
+ * &lt;code&gt;CollatedHumanComparator&lt;/code&gt;. Pretty efficient but still slower than
+ * String.compareTo().
+ * 
+ */
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">public class HumanComparator implements Comparator&lt; String &gt; {</span>
+
+    // Constants for categorising characters and specifying category level
+    // ordering
+<span class="fc" id="L38">    public enum CharType</span>
+    {
+<span class="fc" id="L40">        TYPE_OTHER, TYPE_DIGIT, TYPE_LETTER</span>
+    }
+
+    // A special singleton instance for quick access
+<span class="fc" id="L44">    public static final Comparator&lt;String&gt; DEFAULT_HUMAN_COMPARATOR = new HumanComparator();</span>
+
+    /**
+     * Returns a singleton comparator that implements the default behaviour.
+     * 
+     * @return the singleton comparator.
+     */
+    public static Comparator&lt;String&gt; getInstance()
+    {
+<span class="nc" id="L53">        return DEFAULT_HUMAN_COMPARATOR;</span>
+    }
+
+<span class="pc" id="L56">    private CharType[] sortOrder = { CharType.TYPE_OTHER, CharType.TYPE_DIGIT, CharType.TYPE_LETTER };</span>
+
+    /**
+     * Default constructor which does nothing. Here because it has a non-default
+     * constructor.
+     */
+    public HumanComparator()
+<span class="fc" id="L63">    {</span>
+        // Empty
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Constructor specifying all the character type order.
+     * 
+     * @param sortOrder see setSortOrder
+     */
+    public HumanComparator( CharType[] sortOrder )
+<span class="nc" id="L73">    {</span>
+<span class="nc" id="L74">        setSortOrder( sortOrder );</span>
+<span class="nc" id="L75">    }</span>
+
+    /*
+     * (non-Javadoc)
+     * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+     */
+    public int compare( String str1, String str2 )
+    {
+        // Some quick and easy checks
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">        if( StringUtils.equals( str1, str2 ) ) {</span>
+            // they're identical, possibly both null
+<span class="nc" id="L86">            return 0;</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">        } else if ( str1 == null ) {</span>
+            // str1 is null and str2 isn't so str1 is smaller
+<span class="nc" id="L89">            return -1;</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        } else if ( str2 == null ) {</span>
+            // str2 is null and str1 isn't so str1 is bigger
+<span class="nc" id="L92">            return 1;</span>
+        }
+
+<span class="fc" id="L95">        char[] s1 = str1.toCharArray();</span>
+<span class="fc" id="L96">        char[] s2 = str2.toCharArray();</span>
+<span class="fc" id="L97">        int len1 = s1.length;</span>
+<span class="fc" id="L98">        int len2 = s2.length;</span>
+<span class="fc" id="L99">        int idx = 0;</span>
+        // caseComparison used to defer a case sensitive comparison
+<span class="fc" id="L101">        int caseComparison = 0;</span>
+
+<span class="pc bpc" id="L103" title="1 of 4 branches missed.">        while ( idx &lt; len1 &amp;&amp; idx &lt; len2 )</span>
+        {
+<span class="fc" id="L105">            char c1 = s1[idx];</span>
+<span class="fc" id="L106">            char c2 = s2[idx++];</span>
+
+            // Convert to lower case
+<span class="fc" id="L109">            char lc1 = Character.toLowerCase( c1 );</span>
+<span class="fc" id="L110">            char lc2 = Character.toLowerCase( c2 );</span>
+
+            // If case makes a difference, note the difference the first time
+            // it's encountered
+<span class="fc bfc" id="L114" title="All 6 branches covered.">            if( caseComparison == 0 &amp;&amp; c1 != c2 &amp;&amp; lc1 == lc2 )</span>
+            {
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">                if( Character.isLowerCase( c1 ) )</span>
+<span class="fc" id="L117">                    caseComparison = 1;</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">                else if( Character.isLowerCase( c2 ) )</span>
+<span class="nc" id="L119">                    caseComparison = -1;</span>
+            }
+            // Do the rest of the tests in lower case
+<span class="fc" id="L122">            c1 = lc1;</span>
+<span class="fc" id="L123">            c2 = lc2;</span>
+
+            // leading zeros are a special case
+<span class="fc bfc" id="L126" title="All 4 branches covered.">            if( c1 != c2 || c1 == '0' )</span>
+            {
+                // They might be different, now we can do a comparison
+<span class="fc" id="L129">                CharType type1 = mapCharTypes( c1 );</span>
+<span class="fc" id="L130">                CharType type2 = mapCharTypes( c2 );</span>
+
+                // Do the character class check
+<span class="fc" id="L133">                int result = compareCharTypes( type1, type2 );</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">                if( result != 0 )</span>
+                {
+                    // different character classes so that's sufficient
+<span class="fc" id="L137">                    return result;</span>
+                }
+
+                // If they're not digits, use character to character comparison
+<span class="fc bfc" id="L141" title="All 2 branches covered.">                if( type1 != CharType.TYPE_DIGIT )</span>
+                {
+<span class="fc" id="L143">                    Character ch1 = Character.valueOf( c1 );</span>
+<span class="fc" id="L144">                    Character ch2 = Character.valueOf( c2 );</span>
+<span class="fc" id="L145">                    return ch1.compareTo( ch2 );</span>
+                }
+
+                // The only way to get here is both characters are digits
+<span class="pc bpc" id="L149" title="3 of 6 branches missed.">                assert( type1 == CharType.TYPE_DIGIT &amp;&amp; type2 == CharType.TYPE_DIGIT );</span>
+<span class="fc" id="L150">                result = compareDigits( s1, s2, idx - 1 );</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">                if( result != 0 )</span>
+                {
+                    // Got a result so return it
+<span class="fc" id="L154">                    return result;</span>
+                }
+
+                // No result yet, spin through the digits and continue trying
+<span class="pc bpc" id="L158" title="1 of 6 branches missed.">                while ( idx &lt; len1 &amp;&amp; idx &lt; len2 &amp;&amp; Character.isDigit( s1[idx] ) ) {</span>
+<span class="fc" id="L159">                	idx++;</span>
+                }
+            }
+<span class="fc" id="L162">        }</span>
+
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">        if( len1 == len2 )</span>
+        {
+            // identical so return any case dependency
+<span class="fc" id="L167">            return caseComparison;</span>
+        }
+
+        // Shorter String is less
+<span class="nc" id="L171">        return len1 - len2;</span>
+    }
+
+    /**
+     * Implements ordering based on broad categories (e.g. numbers are always
+     * less than digits)
+     * 
+     * @param type1 first CharType
+     * @param type2 second CharType
+     * @return -1 if type1 &lt; type2, 0 if type1 == type2, 1 if type1 &gt; type2
+     */
+    private int compareCharTypes( CharType type1, CharType type2 )
+    {
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        if( type1 == type2 )</span>
+        {
+            // Same type so equal
+<span class="fc" id="L187">            return 0;</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        } else if( type1 == sortOrder[0] )</span>
+        {
+            // t1 is the lowest order and t2 isn't so t1 must be less
+<span class="fc" id="L191">            return -1;</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">        } else if( type2 == sortOrder[0] )</span>
+        {
+            // t2 is the lowest order and t1 isn't so t1 must be more
+<span class="fc" id="L195">            return 1;</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        } else if( type1 == sortOrder[1] )</span>
+        {
+            // t1 is the middle order and t2 isn't so t1 must be less
+<span class="fc" id="L199">            return -1;</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">        } else if( type2 == sortOrder[1] )</span>
+        {
+            // t2 is the middle order and t1 isn't so t1 must be more
+<span class="fc" id="L203">            return 1;</span>
+        } else
+        {
+            // Can't possibly get here as that would mean they're both sortOrder[2]
+<span class="nc bnc" id="L207" title="All 4 branches missed.">            assert( type1 != type2 );</span>
+<span class="nc" id="L208">            return 0;</span>
+        }
+    }
+
+    /**
+     * Do a numeric comparison on two otherwise identical char arrays.
+     * 
+     * @param left the left hand character array.
+     * @param offset the index of the first digit of the number in both char
+     *            arrays.
+     * @return negative, zero or positive depending on the numeric comparison of
+     *         left and right.
+     */
+    private int compareDigits( char[] left, char[] right, int offset )
+    {
+        // Calculate the integer value of the left hand side
+<span class="fc" id="L224">        int idx = offset;</span>
+<span class="fc bfc" id="L225" title="All 4 branches covered.">        while ( idx &lt; left.length &amp;&amp; Character.isDigit( left[idx] ) ) {</span>
+<span class="fc" id="L226">        	idx++;</span>
+        }
+<span class="fc" id="L228">        int leftLen = idx - offset;</span>
+<span class="fc" id="L229">        int leftValue = Integer.valueOf( new String( left, offset, leftLen ) );</span>
+
+        // Calculate the integer value of the right hand side
+<span class="fc" id="L232">        idx = offset;</span>
+<span class="fc bfc" id="L233" title="All 4 branches covered.">        while ( idx &lt; right.length &amp;&amp; Character.isDigit( right[idx] ) ) {</span>
+<span class="fc" id="L234">        	idx++;</span>
+        }
+<span class="fc" id="L236">        int rightLen = idx - offset;</span>
+<span class="fc" id="L237">        int rightValue = Integer.valueOf( new String( right, offset, rightLen ) );</span>
+
+<span class="fc bfc" id="L239" title="All 2 branches covered.">        if( leftValue == rightValue ) {</span>
+<span class="fc" id="L240">            return leftLen - rightLen; // Same value so use the lengths</span>
+        }
+<span class="fc" id="L242">        return leftValue - rightValue; // Otherwise compare the values</span>
+    }
+
+    public CharType[] getSortOrder()
+    {
+<span class="nc" id="L247">        return sortOrder;</span>
+    }
+
+    /**
+     * Very broadly characterises a character as a digit, a letter or a punctuation character.
+     * 
+     * @param c &lt;code&gt;char&lt;/code&gt; to be characterised
+     * @return &lt;code&gt;IS_DIGIT&lt;/code&gt; if it's a digit, &lt;code&gt;IS_LETTER&lt;/code&gt; if
+     *         it's a letter, &lt;code&gt;IS_PUNC&lt;/code&gt; otherwise.
+     */
+    private CharType mapCharTypes( char c ) {
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if( Character.isDigit( c ) ) {</span>
+<span class="fc" id="L259">            return CharType.TYPE_DIGIT;</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">        } else if( Character.isLetter( c ) ) {</span>
+<span class="fc" id="L261">            return CharType.TYPE_LETTER;</span>
+        } else {
+<span class="fc" id="L263">            return CharType.TYPE_OTHER;</span>
+        }
+    }
+
+    /**
+     * Set the order in which letters, numbers and everything else is presented.
+     * Default is other, digits and then letters. For example, the strings
+     * &quot;abb&quot;, &quot;a1b&quot; and &quot;a b&quot; will sort in the order &quot;a b&quot;, &quot;a1b&quot; then &quot;abb&quot; by
+     * default.
+     * 
+     * @param sortOrder Must be an array of &lt;code&gt;CharType&lt;/code&gt; containing
+     *            exactly 3 elements each of which must be distinct.
+     * @throws IllegalArgumentException if being called on the result of
+     *             &lt;code&gt;HumanStringComparator.getInstance()&lt;/code&gt; or
+     *             &lt;code&gt;sortOrder&lt;/code&gt; is not exactly 3 different
+     *             &lt;code&gt;CharType&lt;/code&gt;.
+     */
+    public void setSortOrder( CharType[] sortOrder ) {
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">        if( this == DEFAULT_HUMAN_COMPARATOR ) {</span>
+<span class="nc" id="L282">        	throw new IllegalArgumentException( &quot;Can't call setters on default &quot; + HumanComparator.class.getName() );</span>
+        }
+
+        // Sanity check the sort order
+<span class="pc bpc" id="L286" title="2 of 4 branches missed.">        if( sortOrder == null || sortOrder.length != 3 ) {</span>
+<span class="nc" id="L287">            throw new IllegalArgumentException( &quot;There must be exactly three elements in the sort order&quot; );</span>
+        }
+<span class="pc bpc" id="L289" title="2 of 6 branches missed.">        if( sortOrder[0] == sortOrder[1] || sortOrder[0] == sortOrder[2] || sortOrder[1] == sortOrder[2] ) {</span>
+<span class="fc" id="L290">            throw new IllegalArgumentException( &quot;The sort order must contain EXACTLY one of each CharType&quot; );</span>
+        }
+<span class="fc" id="L292">        this.sortOrder = sortOrder.clone();</span>
+<span class="fc" id="L293">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

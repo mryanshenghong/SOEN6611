@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XhtmlUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">XhtmlUtil.java</span></div><h1>XhtmlUtil.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+ */
+
+package org.apache.wiki.util;
+
+import org.jdom2.Element;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
+
+/**
+ *  A utility class to generate XHTML objects and ultimately, serialised markup.
+ *  This class is incomplete but serves as a basic utility for JSPWiki, to be
+ *  expanded upon as needed.
+ *  &lt;p&gt;
+ *  This uses JDOM2 as its backing implementation.
+ *  &lt;/p&gt;
+ *
+ *  &lt;h3&gt;Example&lt;/h3&gt;
+ *  &lt;p&gt;
+ *  To generate a single element, an Element with PCDATA content, and then
+ *  embed the latter in the former:
+ *  &lt;/p&gt;
+ *  &lt;pre&gt;
+ *    Element div = XhtmlUtil.element(XHTML.div);
+ *    Element p   = XhtmlUtil.element(XHTML.p,&quot;Some content&quot;);
+ *    div.addContent(p);
+ *  &lt;/pre&gt;
+ *  &lt;p&gt;
+ *  There is also a convenient link and link target constructor methods:
+ *  &lt;/p&gt;
+ *  &lt;pre&gt;
+ *    Element link   = XhtmlUtil.link(&quot;hrefValue&quot;,&quot;linkText&quot;);
+ *    Element target = XhtmlUtil.target(&quot;targetIdValue&quot;,&quot;linkText&quot;);
+ *  &lt;/pre&gt;
+ *
+ * @since 2.10
+ */
+public final class XhtmlUtil {
+
+    private XhtmlUtil() {}
+
+    /** to print &lt;td&gt;&lt;/td&gt; instead of &lt;td /&gt; */
+<span class="fc" id="L59">    public static final Format EXPAND_EMPTY_NODES = Format.getCompactFormat().setExpandEmptyElements( true );</span>
+
+    /**
+     *  Serializes the Element to a String using a compact serialization format.
+     *
+     * @param element  the element to serialize.
+     * @return the serialized Element.
+     */
+    public static String serialize( Element element ) {
+<span class="nc" id="L68">        return serialize( element, false );</span>
+    }
+
+    /**
+     *  Serializes the Element to a String. If &lt;tt&gt;pretty&lt;/tt&gt; is true,
+     *  uses a pretty whitespace format, otherwise a compact format.
+     *
+     * @param element  the element to serialize.
+     * @param pretty   if true, use a pretty whitespace format.
+     * @return the serialized Element.
+     */
+    public static String serialize( Element element, boolean pretty ) {
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        return serialize( element,pretty ? Format.getPrettyFormat() : Format.getCompactFormat() );</span>
+    }
+
+    /**
+     *  Serializes the Element to a String. Allows to use a custom &lt;tt&gt;format&lt;/tt&gt;.
+     *
+     * @param element  the element to serialize.
+     * @param format   custom &lt;tt&gt;format&lt;/tt&gt; used to serialize the Element.
+     * @return the serialized Element.
+     */
+    public static String serialize( Element element, Format format ) {
+<span class="fc" id="L91">        XMLOutputter out = new XMLOutputter( format );</span>
+<span class="fc" id="L92">        return out.outputString( element );</span>
+    }
+
+    /**
+     *  Return an Element with an element type name matching the parameter.
+     *
+     * @param element  the XHTML element type.
+     * @return a JDOM2 Element.
+     */
+    public static Element element( XHTML element ) {
+<span class="fc" id="L102">        return element( element, null );</span>
+    }
+
+    /**
+     *  Return an Element with an element type name matching the parameter,
+     *  and optional PCDATA (parsed character data, a String) content.
+     *
+     * @param element  the XHTML element type.
+     * @param content  the optional PCDATA content.
+     * @return a JDOM2 Element.
+     */
+    public static Element element( XHTML element, String content ) {
+<span class="fc" id="L114">        Element elt = new Element( element.name() );</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if( content != null ) {</span>
+<span class="fc" id="L116">            elt.addContent( content );</span>
+        }
+<span class="fc" id="L118">        return elt;</span>
+    }
+
+    /**
+     *  Return an XHTML link with a required 'href' attribute value and optional link (PCDATA) content.
+     *
+     * @param href     the required 'href' value.
+     * @param content  the optional link (PCDATA) content.
+     * @return a JDOM2 Element.
+     */
+    public static Element link( String href, String content ) {
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if( href == null ) {</span>
+<span class="nc" id="L130">            throw new IllegalArgumentException(&quot;missing 'href' attribute value.&quot;);</span>
+        }
+<span class="fc" id="L132">        return fLink(href,content,null);</span>
+    }
+
+    /**
+     *  Return an XHTML link target with a required 'id' attribute value.
+     *
+     * @param id    the required 'id' link target value.
+     * @return a JDOM2 Element.
+     */
+    public static Element target( String id, String content ) {
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        if( id == null ) {</span>
+<span class="nc" id="L143">            throw new IllegalArgumentException( &quot;missing 'id' attribute value.&quot; );</span>
+        }
+<span class="nc" id="L145">        return fLink( null, content, id );</span>
+    }
+
+    /**
+     *  Return an XHTML link with an optional 'href' attribute, optional
+     *  link content, and optional 'id' link target value.
+     *
+     * @param href     the optional 'href' value.
+     * @param content  the optional link (PCDATA) content.
+     * @param id       the optional 'id' link target value.
+     * @return a JDOM2 Element.
+     */
+    private static Element fLink( String href, String content, String id ) {
+<span class="fc" id="L158">        Element a = element( XHTML.a );</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">        if( href != null ) {</span>
+<span class="fc" id="L160">            a.setAttribute( XHTML.ATTR_href, href );</span>
+        }
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">        if( content != null ) {</span>
+<span class="fc" id="L163">            a.addContent( content );</span>
+        }
+<span class="pc bpc" id="L165" title="1 of 2 branches missed.">        if( id != null ) {</span>
+<span class="nc" id="L166">            a.setAttribute( XHTML.ATTR_id, id );</span>
+        }
+<span class="fc" id="L168">        return a;</span>
+    }
+
+    /**
+     *  Return an XHTML &lt;tt&gt;img&lt;/tt&gt; element with an required 'src' attribute
+     *  and optional 'alt' alternative text value.
+     *
+     * @param src      the required 'src' value.
+     * @param alt      the optional 'alt' alternative text value.
+     * @return a JDOM2 Element.
+     */
+    public static Element img( String src, String alt ) {
+<span class="nc" id="L180">        Element img = element( XHTML.img );</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        if( src == null ) {</span>
+<span class="nc" id="L182">            throw new IllegalArgumentException( &quot;missing 'src' attribute value.&quot; );</span>
+        }
+<span class="nc" id="L184">        img.setAttribute( XHTML.ATTR_src, src );</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">        if( alt != null ) {</span>
+<span class="nc" id="L186">            img.setAttribute( XHTML.ATTR_alt, alt );</span>
+        }
+<span class="nc" id="L188">        return img;</span>
+    }
+
+    /**
+     *  Return an XHTML form &lt;tt&gt;input&lt;/tt&gt; element with optional 'type', 'name' and 'value' attributes.
+     *
+     * @param type   the optional 'type' value.
+     * @param name   the optional 'name' value.
+     * @param value  the optional 'value' value.
+     * @return a JDOM2 Element.
+     */
+    public static Element input( String type, String name, String value ) {
+<span class="nc" id="L200">        Element input = element( XHTML.input );</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        if( type != null ) {</span>
+<span class="nc" id="L202">            input.setAttribute( XHTML.ATTR_type, type );</span>
+        }
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if( name != null ) {</span>
+<span class="nc" id="L205">            input.setAttribute( XHTML.ATTR_name, name );</span>
+        }
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        if( value != null ) {</span>
+<span class="nc" id="L208">            input.setAttribute( XHTML.ATTR_value, value );</span>
+        }
+<span class="nc" id="L210">        return input;</span>
+    }
+
+    public static void setClass( Element element, String classValue ) {
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        if( classValue == null ) {</span>
+<span class="nc" id="L215">            throw new IllegalArgumentException( &quot;missing 'class' attribute value.&quot; );</span>
+        }
+<span class="nc" id="L217">        element.setAttribute( XHTML.ATTR_class, classValue );</span>
+<span class="nc" id="L218">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

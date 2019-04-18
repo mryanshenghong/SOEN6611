@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimedCounterList.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">TimedCounterList.java</span></div><h1>TimedCounterList.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.    
+ */
+package org.apache.wiki.util;
+
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ *  Provides a List in which all items store their addition time. This
+ *  can then be used to clean the list from old items.
+ *  &lt;p&gt;
+ *  This class is thread-safe - all modifications are blocking, but
+ *  reading is non-blocking (unless a write is ongoing).
+ *  
+ *  @param &lt;T&gt; The class you wish to store here
+ *  @since 2.8
+ */
+<span class="fc" id="L37">public class TimedCounterList&lt;T&gt; extends AbstractList&lt;T&gt;</span>
+{
+<span class="fc" id="L39">    private ArrayList&lt;CounterItem&lt;T&gt;&gt; m_list = new ArrayList&lt;CounterItem&lt;T&gt;&gt;();</span>
+<span class="fc" id="L40">    private ReadWriteLock             m_lock = new ReentrantReadWriteLock();</span>
+    
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public T set( int index, T element )
+    {
+<span class="nc" id="L48">        m_lock.writeLock().lock();</span>
+        
+        T t;
+        
+        try
+        {
+<span class="nc" id="L54">            t = m_list.set(index,new CounterItem&lt;T&gt;(element)).m_obj;</span>
+        }
+        finally
+        {
+<span class="nc" id="L58">            m_lock.writeLock().unlock();</span>
+        }
+        
+<span class="nc" id="L61">        return t;</span>
+    }
+    
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public T get( int index )
+    {
+<span class="nc" id="L70">        m_lock.readLock().lock();</span>
+        
+        T t;
+        
+        try
+        {
+<span class="nc" id="L76">            t = m_list.get(index).m_obj;</span>
+        }
+        finally
+        {
+<span class="nc" id="L80">            m_lock.readLock().unlock();</span>
+        }
+        
+<span class="nc" id="L83">        return t;</span>
+    }
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public int size()
+    {
+<span class="fc" id="L92">        m_lock.readLock().lock();</span>
+<span class="fc" id="L93">        int size = 0;</span>
+
+        try
+        {
+<span class="fc" id="L97">            size = m_list.size();</span>
+        }
+        finally
+        {
+<span class="fc" id="L101">            m_lock.readLock().unlock();</span>
+        }
+        
+<span class="fc" id="L104">        return size;</span>
+    }
+    
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public void add( int index, T element )
+    {
+<span class="fc" id="L113">        m_lock.writeLock().lock();</span>
+        
+        try
+        {
+<span class="fc" id="L117">            m_list.add(index, new CounterItem&lt;T&gt;(element));</span>
+        }
+        finally
+        {
+<span class="fc" id="L121">            m_lock.writeLock().unlock();</span>
+        }
+<span class="fc" id="L123">    }</span>
+    
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public T remove( int index )
+    {
+<span class="nc" id="L131">        m_lock.writeLock().lock();</span>
+        T t;
+
+        try
+        {
+<span class="nc" id="L136">            t = m_list.remove( index ).m_obj;</span>
+        }
+        finally
+        {
+<span class="nc" id="L140">            m_lock.writeLock().unlock();</span>
+        }
+        
+<span class="nc" id="L143">        return t;</span>
+    }
+
+    /**
+     *  Returns the count how many times this object is available in
+     *  this list, using equals().
+     *  
+     *  @param obj The object to count.
+     *  @return The count of the objects.
+     */
+    public int count( T obj )
+    {
+<span class="fc" id="L155">        int c = 0;</span>
+<span class="fc" id="L156">        m_lock.readLock().lock();</span>
+        
+        try
+        {
+<span class="fc bfc" id="L160" title="All 2 branches covered.">            for( CounterItem&lt; T &gt; i : m_list )</span>
+            {
+<span class="fc bfc" id="L162" title="All 2 branches covered.">                if( i.m_obj.equals( obj ) )</span>
+                {
+<span class="fc" id="L164">                    c++;</span>
+                }
+<span class="fc" id="L166">            }</span>
+        }
+        finally
+        {
+<span class="fc" id="L170">            m_lock.readLock().unlock();</span>
+        }
+        
+<span class="fc" id="L173">        return c;</span>
+    }
+    
+    /**
+     *  Performs a cleanup of all items older than maxage.
+     *  
+     *  @param maxage The maximum age in milliseconds after an item is removed.
+     */
+    public void cleanup( long maxage )
+    {
+<span class="fc" id="L183">        m_lock.writeLock().lock();</span>
+        
+        try
+        {
+<span class="fc" id="L187">            long now = System.currentTimeMillis();</span>
+        
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            for( Iterator&lt;CounterItem&lt;T&gt;&gt; i = m_list.iterator(); i.hasNext(); )</span>
+            {
+<span class="fc" id="L191">                CounterItem&lt;T&gt; ci = i.next();</span>
+            
+<span class="fc" id="L193">                long age = now - ci.m_addTime;</span>
+            
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">                if( age &gt; maxage )</span>
+                {
+<span class="fc" id="L197">                    i.remove();</span>
+                }
+<span class="fc" id="L199">            }</span>
+        }
+        finally
+        {
+<span class="fc" id="L203">            m_lock.writeLock().unlock();</span>
+        }
+<span class="fc" id="L205">    }</span>
+    
+    /**
+     *  Returns the time when this particular item was added on the list.
+     *  
+     *  @param index The index of the object.
+     *  @return The addition time in milliseconds (@see System.currentTimeMillis()).
+     */
+    public long getAddTime( int index )
+    {
+<span class="nc" id="L215">        m_lock.readLock().lock();</span>
+<span class="nc" id="L216">        long res = 0;</span>
+        
+        try
+        {
+<span class="nc" id="L220">            res = m_list.get( index ).m_addTime;</span>
+        }
+        finally
+        {
+<span class="nc" id="L224">            m_lock.readLock().unlock();</span>
+        }
+        
+<span class="nc" id="L227">        return res;</span>
+    }
+    
+    private static class CounterItem&lt;E&gt;
+    {
+        private E      m_obj;
+        private long   m_addTime;
+        
+        public CounterItem(E o)
+<span class="fc" id="L236">        {</span>
+<span class="fc" id="L237">            m_addTime = System.currentTimeMillis();</span>
+<span class="fc" id="L238">            m_obj = o;</span>
+<span class="fc" id="L239">        }</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

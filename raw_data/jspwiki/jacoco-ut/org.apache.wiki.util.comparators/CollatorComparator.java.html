@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CollatorComparator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util.comparators</a> &gt; <span class="el_source">CollatorComparator.java</span></div><h1>CollatorComparator.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+
+package org.apache.wiki.util.comparators;
+
+import java.text.Collator;
+import java.util.Comparator;
+
+import org.apache.commons.lang.StringUtils;
+
+/**
+ * A comparator that sorts Strings using a Collator. This class is needed
+ * because, even though Collator implements
+ * &lt;code&gt;Comparator&amp;lt;Object&amp;gt;&lt;/code&gt; and the required
+ * &lt;code&gt;compare(String, String)&lt;/code&gt; method, you can't safely cast Collator
+ * to &lt;code&gt;Comparator&amp;lt;String&amp;gt;&lt;/code&gt;.
+ * 
+ */
+public class CollatorComparator implements Comparator&lt;String&gt;
+{
+    // A special singleton instance for quick access
+<span class="fc" id="L38">    public static final Comparator&lt;String&gt; DEFAULT_LOCALE_COMPARATOR = new CollatorComparator();</span>
+
+    protected Collator m_collator;
+
+    /**
+     * Default constructor uses the current locale's collator.
+     */
+    public CollatorComparator()
+<span class="fc" id="L46">    {</span>
+<span class="fc" id="L47">        m_collator = Collator.getInstance();</span>
+<span class="fc" id="L48">    }</span>
+
+    /**
+     * Construct with a specific collator.
+     * 
+     * @param collator the collator to be used for comparisons
+     */
+    public CollatorComparator( Collator collator )
+<span class="nc" id="L56">    {</span>
+<span class="nc" id="L57">        m_collator = collator;</span>
+<span class="nc" id="L58">    }</span>
+
+    /*
+     * (non-Javadoc)
+     * @see java.util.Comparator#compare(java.lang.Object, java.lang.Object)
+     */
+    public int compare( String str1, String str2 )
+    {
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if( StringUtils.equals( str1, str2 ) ) {</span>
+<span class="nc" id="L67">        	return 0; // the same object</span>
+        }
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">        if( str1 == null ) {</span>
+<span class="nc" id="L70">        	return -1; // str1 is null and str2 isn't so str1 is smaller</span>
+        }
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">        if( str2 == null ) {</span>
+<span class="nc" id="L73">        	return 1; // str2 is null and str1 isn't so str1 is bigger</span>
+        }
+<span class="fc" id="L75">        return m_collator.compare( str1, str2 );</span>
+    }
+
+    /**
+     * Specify a new collator.
+     * 
+     * @param collator the collator to be used from now on
+     */
+    public void setCollator( Collator collator )
+    {
+<span class="nc" id="L85">        m_collator = collator;</span>
+<span class="nc" id="L86">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

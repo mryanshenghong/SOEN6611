@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ByteUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">ByteUtils.java</span></div><h1>ByteUtils.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+
+package org.apache.wiki.util;
+
+/**
+ *  A collection of static byte utility methods.
+ *  
+ * @author Ichiro Furusato
+ */
+public class ByteUtils
+{
+<span class="fc" id="L29">    private static final char[] hexArray = &quot;0123456789abcdef&quot;.toCharArray();</span>
+    
+    
+    /**
+     *  byte[] array to hex conversion. Note that this provides
+     *  no delimiters; the bytes are simply concatenated.
+     */
+    public static String bytes2hex( byte[] bytes )
+    {
+<span class="fc" id="L38">        char[] ca = new char[bytes.length * 2];</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        for ( int i = 0; i &lt; bytes.length; i++ ) {</span>
+<span class="fc" id="L40">            int v = bytes[i] &amp; 0xff;</span>
+<span class="fc" id="L41">            ca[i * 2] = hexArray[v &gt;&gt;&gt; 4];</span>
+<span class="fc" id="L42">            ca[i * 2 + 1] = hexArray[v &amp; 0x0f];</span>
+        }
+<span class="fc" id="L44">        return new String(ca);</span>
+    }
+    
+    
+    /**
+     *  byte to hex conversion.
+     */
+    public static String byte2hex( byte b )
+    {
+<span class="fc" id="L53">        return Integer.toHexString(b &amp; 0xff);</span>
+    }
+
+    
+    /**
+     *  Parses a hexadecimal string into its corresponding bytes.
+     */
+    public static byte[] parseHexBinary( String hex )
+    {
+<span class="fc" id="L62">        final int len = hex.length();</span>
+        // e.g., &quot;111&quot; is not a valid hex encoding.
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        if( len%2 != 0 ) {</span>
+<span class="nc" id="L65">            throw new IllegalArgumentException(&quot;hexBinary needs to be even-length: &quot;+hex);</span>
+        }
+<span class="fc" id="L67">        byte[] out = new byte[len/2];</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        for( int i = 0; i &lt; len; i+=2 ) {</span>
+<span class="fc" id="L69">            int h = hexToBin(hex.charAt(i));</span>
+<span class="fc" id="L70">            int l = hexToBin(hex.charAt(i+1));</span>
+<span class="pc bpc" id="L71" title="2 of 4 branches missed.">            if ( h==-1 || l==-1 ) {</span>
+<span class="nc" id="L72">                throw new IllegalArgumentException(&quot;contains illegal character for hexBinary: &quot;+hex);</span>
+            }
+<span class="fc" id="L74">            out[i/2] = (byte)(h*16+l);</span>
+        }
+<span class="fc" id="L76">        return out;</span>
+    }
+    
+    
+    /**
+     *  Converts a single hex character into its integer equivalent.
+     */
+    public static int hexToBin( char c )
+    {
+<span class="pc bpc" id="L85" title="1 of 4 branches missed.">        if ( '0'&lt;=c &amp;&amp; c&lt;='9' ) return c-'0';</span>
+<span class="pc bpc" id="L86" title="2 of 4 branches missed.">        if ( 'A'&lt;=c &amp;&amp; c&lt;='F' ) return c-'A'+10;</span>
+<span class="pc bpc" id="L87" title="2 of 4 branches missed.">        if ( 'a'&lt;=c &amp;&amp; c&lt;='f' ) return c-'a'+10;</span>
+<span class="nc" id="L88">        return -1;</span>
+    }
+
+    
+    private ByteUtils() {}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

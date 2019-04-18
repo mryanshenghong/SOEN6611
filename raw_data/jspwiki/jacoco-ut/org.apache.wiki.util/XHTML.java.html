@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XHTML.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">XHTML.java</span></div><h1>XHTML.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+
+package org.apache.wiki.util;
+
+/**
+ *  Provides constants for the Extensible HyperText Markup Language (XHTML) 1.0.
+ *
+ * @since     2.10
+ */
+<span class="fc" id="L27">public enum XHTML </span>
+{
+    // XHTML element type names ...........................................
+
+<span class="fc" id="L31">    a, abbr, acronym, address, applet, area,</span>
+<span class="fc" id="L32">    b, base, basefont, bdo, big, blockquote, body, br, button,</span>
+<span class="fc" id="L33">    caption, center, cite, code, col, colgroup,</span>
+<span class="fc" id="L34">    dd, del, dfn, dir, div, dl, dt,</span>
+<span class="fc" id="L35">    em,</span>
+<span class="fc" id="L36">    fieldset, font, form, frame, frameset,</span>
+<span class="fc" id="L37">    h1, h2, h3, h4, h5, h6, head, hr, html,</span>
+<span class="fc" id="L38">    i, iframe, img, input, ins, isindex,</span>
+<span class="fc" id="L39">    kbd,</span>
+<span class="fc" id="L40">    label,</span>
+<span class="fc" id="L41">    legend, li, link,</span>
+<span class="fc" id="L42">    map, menu, meta,</span>
+<span class="fc" id="L43">    noframes, noscript,</span>
+<span class="fc" id="L44">    object, ol, optgroup, option,</span>
+<span class="fc" id="L45">    p, param, pre,</span>
+<span class="fc" id="L46">    q,</span>
+<span class="fc" id="L47">    s, samp, script, select, small, span, strike, strong, style, sub, sup,</span>
+<span class="fc" id="L48">    table, tbody, td, textarea, tfoot, th, thead, title, tr, tt,</span>
+<span class="fc" id="L49">    u, ul,</span>
+<span class="fc" id="L50">    var;</span>
+
+
+    /** 
+     *  Returns the element type name (AKA generic identifier).
+     *  This is a convenience method that returns the same value 
+     *  as &lt;tt&gt;XHTML.&amp;lt;GI&amp;gt;&gt;.name();&lt;/tt&gt;.
+     */
+    public String getName()
+    {
+<span class="nc" id="L60">        return this.name();</span>
+    }
+
+    
+    // XML Public and Namespace identifiers for XHTML .........................
+
+    /** XML Namespace URI for the Extensible HyperText Markup Language (XHTML). */
+    public static final String XMLNS_xhtml = &quot;http://www.w3.org/1999/xhtml&quot;;
+
+    /** A String containing the Formal Public Identifier (FPI) for the XHTML 1.0 Strict DTD. */
+    public static final String STRICT_DTD_PubId = &quot;-//W3C//DTD XHTML 1.0 Strict//EN&quot;;
+    /** A String containing a system identifier for the XHTML 1.0 Strict DTD. */
+<span class="fc" id="L72">    public static String STRICT_DTD_SysId = &quot;xhtml1-strict.dtd&quot;;</span>
+
+    /** A String containing the Formal Public Identifier (FPI) for the XHTML 1.0 Transitional DTD. */
+    public static final String TRANSITIONAL_DTD_PubId = &quot;-//W3C//DTD XHTML 1.0 Transitional//EN&quot;;
+    /** A String containing a system identifier for the XHTML 1.0 Transitional DTD. */
+<span class="fc" id="L77">    public static String TRANSITIONAL_DTD_SysId = &quot;xhtml1-transitional.dtd&quot;;</span>
+
+    /** A String containing the Formal Public Identifier (FPI) for the XHTML 1.0 Frameset DTD. */
+    public static final String FRAMESET_DTD_PubId = &quot;-//W3C//DTD XHTML 1.0 Frameset//EN&quot;;
+    /** A String containing a system identifier for the XHTML 1.0 Frameset DTD. */
+<span class="fc" id="L82">    public static String FRAMESET_DTD_SysId = &quot;xhtml1-frameset.dtd&quot;;</span>
+
+    // CSS strings ........................................................
+
+    /** An identifier for the CSS stylesheet notation using its W3C home page URI. */
+    public static final String CSS_style  = &quot;http://www.w3.org/Style/CSS/&quot;;
+
+
+    // XHTML common attribute names .......................................
+
+    /** String containing the XHTML 'id' attribute name (i.e., 'id'). */
+    public static final String ATTR_id            = &quot;id&quot;;
+
+    /** String containing the XHTML 'class' attribute name (i.e., 'class'). */
+    public static final String ATTR_class         = &quot;class&quot;;
+
+    /** String containing the XHTML 'name' attribute name (i.e., 'name'). */
+    public static final String ATTR_name          = &quot;name&quot;;
+
+    /** String containing the XHTML 'type' attribute name (i.e., 'type'). */
+    public static final String ATTR_type          = &quot;type&quot;;
+
+    /** String containing the XHTML 'value' attribute name (i.e., 'value'). */
+    public static final String ATTR_value         = &quot;value&quot;;
+
+    /** String containing the XHTML 'href' attribute name (i.e., 'href'). */
+    public static final String ATTR_href          = &quot;href&quot;;
+
+    /** String containing the XHTML 'title' attribute name (i.e., 'title'). */
+    public static final String ATTR_title         = &quot;title&quot;;
+
+    /** String containing the XHTML 'width' attribute name (i.e., 'width'). */
+    public static final String ATTR_width         = &quot;width&quot;;
+
+    /** String containing the XHTML 'height' attribute name (i.e., 'height'). */
+    public static final String ATTR_height        = &quot;height&quot;;
+
+    /** String containing the XHTML 'border' attribute name (i.e., 'border'). */
+    public static final String ATTR_border        = &quot;border&quot;;
+
+    /** String containing the XHTML 'colspan' attribute name (i.e., 'colspan'). */
+    public static final String ATTR_colspan       = &quot;colspan&quot;;
+
+    /** String containing the XHTML 'src' attribute name (i.e., 'src'). */
+    public static final String ATTR_src           = &quot;src&quot;;
+
+    /** String containing the XHTML 'alt' attribute name (i.e., 'alt'). */
+    public static final String ATTR_alt           = &quot;alt&quot;;
+
+    // okay, maybe not so common
+
+    /** String containing the XHTML 'bgcolor' attribute name (i.e., 'bgcolor'). */
+    public static final String ATTR_bgcolor       = &quot;bgcolor&quot;;
+
+    /** String containing the XHTML 'checked' attribute name (i.e., 'checked'). */
+    public static final String ATTR_checked       = &quot;checked&quot;;
+    
+    /** String containing the XHTML 'cols' attribute name (i.e., 'cols'). */
+    public static final String ATTR_cols          = &quot;cols&quot;;
+    
+    /** String containing the XHTML 'content' attribute name (i.e., 'content'). */
+    public static final String ATTR_content       = &quot;content&quot;;
+
+    /** String containing the XHTML 'http-equiv' attribute name (i.e., 'http-equiv'). */
+    public static final String ATTR_httpEquiv     = &quot;http-equiv&quot;;
+
+    /** String containing the XHTML 'scheme' attribute name (i.e., 'scheme'). */
+    public static final String ATTR_scheme        = &quot;scheme&quot;;
+
+    /** String containing the XHTML 'rel' attribute name (i.e., 'rel'). */
+    public static final String ATTR_rel           = &quot;rel&quot;;
+
+    /** String containing the XHTML 'rows' attribute name (i.e., 'rows'). */
+    public static final String ATTR_rows          = &quot;rows&quot;;
+    
+    /** String containing the XHTML 'selected' attribute name (i.e., 'selected'). */
+    public static final String ATTR_selected      = &quot;selected&quot;;
+    
+    /** String containing the XHTML 'size' attribute name (i.e., 'size'). */
+    public static final String ATTR_size          = &quot;size&quot;;
+    
+    /** String containing the XHTML 'style' attribute name (i.e., 'style'). */
+    public static final String ATTR_style         = &quot;style&quot;;
+
+    /** String containing the XHTML 'align' attribute name (i.e., 'align'). */
+    public static final String ATTR_align         = &quot;align&quot;;
+
+    /** String containing the XHTML 'cellpadding' attribute name (i.e., 'cellpadding'). */
+    public static final String ATTR_cellpadding   = &quot;cellpadding&quot;;
+    
+    /** String containing the XHTML 'cellspacing' attribute name (i.e., 'cellspacing'). */
+    public static final String ATTR_cellspacing   = &quot;cellspacing&quot;;
+
+    // XHTML character entities ...........................................
+
+    /**
+     *  Returns a String containing the named character entity corresponding to
+     *  the character number &lt;tt&gt;num&lt;/tt&gt; for the range 160-255. Throws an 
+     *  ArrayOutOfBoundsException if beyond the prescribed range.
+     */
+    public static String getNamedCharacterEntity( int num )
+    {
+<span class="nc" id="L184">        return CHARACTER_ENTITIES[num-160];</span>
+    }
+
+    /* Conversion table for the XHTML upper ASCII character entities (character numbers 160-255). */
+<span class="fc" id="L188">    private static final String[] CHARACTER_ENTITIES = {</span>
+        &quot;nbsp&quot; /* 160 */,   &quot;iexcl&quot; /* 161 */,  &quot;cent&quot; /* 162 */,   &quot;pound&quot; /* 163 */,
+        &quot;curren&quot; /* 164 */, &quot;yen&quot; /* 165 */,    &quot;brvbar&quot; /* 166 */, &quot;sect&quot; /* 167 */,
+        &quot;uml&quot; /* 168 */,    &quot;copy&quot; /* 169 */,   &quot;ordf&quot; /* 170 */,   &quot;laquo&quot; /* 171 */,
+        &quot;not&quot; /* 172 */,    &quot;shy&quot; /* 173 */,    &quot;reg&quot; /* 174 */,    &quot;macr&quot; /* 175 */,
+        &quot;deg&quot; /* 176 */,    &quot;plusmn&quot; /* 177 */, &quot;sup2&quot; /* 178 */,   &quot;sup3&quot; /* 179 */,
+        &quot;acute&quot; /* 180 */,  &quot;micro&quot; /* 181 */,  &quot;para&quot; /* 182 */,   &quot;middot&quot; /* 183 */,
+        &quot;cedil&quot; /* 184 */,  &quot;sup1&quot; /* 185 */,   &quot;ordm&quot; /* 186 */,   &quot;raquo&quot; /* 187 */,
+        &quot;frac14&quot; /* 188 */, &quot;frac12&quot; /* 189 */, &quot;frac34&quot; /* 190 */, &quot;iquest&quot; /* 191 */,
+        &quot;Agrave&quot; /* 192 */, &quot;Aacute&quot; /* 193 */, &quot;Acirc&quot; /* 194 */,  &quot;Atilde&quot; /* 195 */,
+        &quot;Auml&quot; /* 196 */,   &quot;Aring&quot; /* 197 */,  &quot;AElig&quot; /* 198 */,  &quot;Ccedil&quot; /* 199 */,
+        &quot;Egrave&quot; /* 200 */, &quot;Eacute&quot; /* 201 */, &quot;Ecirc&quot; /* 202 */,  &quot;Euml&quot; /* 203 */,
+        &quot;Igrave&quot; /* 204 */, &quot;Iacute&quot; /* 205 */, &quot;Icirc&quot; /* 206 */,  &quot;Iuml&quot; /* 207 */,
+        &quot;ETH&quot; /* 208 */,    &quot;Ntilde&quot; /* 209 */, &quot;Ograve&quot; /* 210 */, &quot;Oacute&quot; /* 211 */,
+        &quot;Ocirc&quot; /* 212 */,  &quot;Otilde&quot; /* 213 */, &quot;Ouml&quot; /* 214 */,   &quot;times&quot; /* 215 */,
+        &quot;Oslash&quot; /* 216 */, &quot;Ugrave&quot; /* 217 */, &quot;Uacute&quot; /* 218 */, &quot;Ucirc&quot; /* 219 */,
+        &quot;Uuml&quot; /* 220 */,   &quot;Yacute&quot; /* 221 */, &quot;THORN&quot; /* 222 */,  &quot;szlig&quot; /* 223 */,
+        &quot;agrave&quot; /* 224 */, &quot;aacute&quot; /* 225 */, &quot;acirc&quot; /* 226 */,  &quot;atilde&quot; /* 227 */,
+        &quot;auml&quot; /* 228 */,   &quot;aring&quot; /* 229 */,  &quot;aelig&quot; /* 230 */,  &quot;ccedil&quot; /* 231 */,
+        &quot;egrave&quot; /* 232 */, &quot;eacute&quot; /* 233 */, &quot;ecirc&quot; /* 234 */,  &quot;euml&quot; /* 235 */,
+        &quot;igrave&quot; /* 236 */, &quot;iacute&quot; /* 237 */, &quot;icirc&quot; /* 238 */,  &quot;iuml&quot; /* 239 */,
+        &quot;eth&quot; /* 240 */,    &quot;ntilde&quot; /* 241 */, &quot;ograve&quot; /* 242 */, &quot;oacute&quot; /* 243 */,
+        &quot;ocirc&quot; /* 244 */,  &quot;otilde&quot; /* 245 */, &quot;ouml&quot; /* 246 */,   &quot;divide&quot; /* 247 */,
+        &quot;oslash&quot; /* 248 */, &quot;ugrave&quot; /* 249 */, &quot;uacute&quot; /* 250 */, &quot;ucirc&quot; /* 251 */,
+        &quot;uuml&quot; /* 252 */,   &quot;yacute&quot; /* 253 */, &quot;thorn&quot; /* 254 */,  &quot;yuml&quot; /* 255 */ };
+
+} // end org.apache.wiki.util.XHTML
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

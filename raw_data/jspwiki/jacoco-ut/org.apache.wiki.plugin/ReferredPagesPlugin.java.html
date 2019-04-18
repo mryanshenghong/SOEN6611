@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReferredPagesPlugin.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.plugin</a> &gt; <span class="el_source">ReferredPagesPlugin.java</span></div><h1>ReferredPagesPlugin.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+*/
+package org.apache.wiki.plugin;
+
+import java.util.*;
+
+import org.apache.log4j.Logger;
+import org.apache.oro.text.regex.*;
+import org.apache.wiki.ReferenceManager;
+import org.apache.wiki.WikiContext;
+import org.apache.wiki.WikiEngine;
+import org.apache.wiki.WikiPage;
+import org.apache.wiki.api.exceptions.PluginException;
+import org.apache.wiki.api.plugin.WikiPlugin;
+import org.apache.wiki.util.TextUtil;
+
+
+/**
+ *  Displays the pages referring to the current page.
+ *
+ *  &lt;p&gt;Parameters&lt;/p&gt;
+ *  &lt;ul&gt;
+ *    &lt;li&gt;&lt;b&gt;name&lt;/b&gt; - Name of the root page. Default name of calling page
+ *    &lt;li&gt;&lt;b&gt;type&lt;/b&gt; - local|externalattachment
+ *    &lt;li&gt;&lt;b&gt;depth&lt;/b&gt; - How many levels of pages to be parsed.
+ *    &lt;li&gt;&lt;b&gt;include&lt;/b&gt; - Include only these pages. (eg. include='UC.*|BP.*' )
+ *    &lt;li&gt;&lt;b&gt;exclude&lt;/b&gt; - Exclude with this pattern. (eg. exclude='LeftMenu' )
+ *    &lt;li&gt;&lt;b&gt;format&lt;/b&gt; -  full|compact, FULL now expands all levels correctly
+ *  &lt;/ul&gt;
+ *
+ */
+<span class="nc" id="L48">public class ReferredPagesPlugin implements WikiPlugin</span>
+{
+<span class="nc" id="L50">    private static Logger log = Logger.getLogger( ReferredPagesPlugin.class );</span>
+    private WikiEngine     m_engine;
+    private int            m_depth;
+<span class="nc" id="L53">    private HashSet&lt;String&gt; m_exists  = new HashSet&lt;String&gt;();</span>
+<span class="nc" id="L54">    private StringBuffer   m_result  = new StringBuffer(1024);</span>
+<span class="nc" id="L55">    private PatternMatcher m_matcher = new Perl5Matcher();</span>
+    private Pattern        m_includePattern;
+    private Pattern        m_excludePattern;
+<span class="nc" id="L58">    private boolean m_formatCompact  = true;</span>
+<span class="nc" id="L59">    private boolean m_formatSort     = false;</span>
+
+    /** The parameter name for the root page to start from.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_ROOT    = &quot;page&quot;;
+
+    /** The parameter name for the depth.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_DEPTH   = &quot;depth&quot;;
+
+    /** The parameter name for the type of the references.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_TYPE    = &quot;type&quot;;
+
+    /** The parameter name for the included pages.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_INCLUDE = &quot;include&quot;;
+
+    /** The parameter name for the excluded pages.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_EXCLUDE = &quot;exclude&quot;;
+
+    /** The parameter name for the format.  Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final String PARAM_FORMAT  = &quot;format&quot;;
+
+    /** The minimum depth. Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final int    MIN_DEPTH = 1;
+
+    /** The maximum depth. Value is &lt;tt&gt;{@value}&lt;/tt&gt;. */
+    public static final int    MAX_DEPTH = 8;
+
+    /**
+     *  {@inheritDoc}
+     */
+    public String execute( WikiContext context, Map&lt;String, String&gt; params )
+        throws PluginException
+    {
+<span class="nc" id="L91">        m_engine = context.getEngine();</span>
+
+<span class="nc" id="L93">        WikiPage         page   = context.getPage();</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if( page == null ) return &quot;&quot;;</span>
+
+        // parse parameters
+<span class="nc" id="L97">        String rootname = params.get( PARAM_ROOT );</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if( rootname == null ) rootname = page.getName() ;</span>
+
+<span class="nc" id="L100">        String format = params.get( PARAM_FORMAT );</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if( format == null) format = &quot;&quot;;</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if( format.indexOf( &quot;full&quot; ) &gt;=0 ) m_formatCompact = false ;</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if( format.indexOf( &quot;sort&quot; ) &gt;=0 ) m_formatSort    = true  ;</span>
+
+<span class="nc" id="L105">        m_depth = TextUtil.parseIntParameter( params.get( PARAM_DEPTH ), MIN_DEPTH );</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if( m_depth &gt; MAX_DEPTH )  m_depth = MAX_DEPTH;</span>
+
+<span class="nc" id="L108">        String includePattern = params.get(PARAM_INCLUDE);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        if( includePattern == null ) includePattern = &quot;.*&quot;;</span>
+
+<span class="nc" id="L111">        String excludePattern = params.get(PARAM_EXCLUDE);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if( excludePattern == null ) excludePattern = &quot;^$&quot;;</span>
+
+<span class="nc" id="L114">        log.debug( &quot;Fetching referred pages for &quot;+ rootname +</span>
+                   &quot; with a depth of &quot;+ m_depth +
+                   &quot; with include pattern of &quot;+ includePattern +
+                   &quot; with exclude pattern of &quot;+ excludePattern );
+
+        //
+        // do the actual work
+        //
+<span class="nc" id="L122">        String href  = context.getViewURL(rootname);</span>
+<span class="nc bnc" id="L123" title="All 4 branches missed.">        String title = &quot;ReferredPagesPlugin: depth[&quot;+m_depth+</span>
+                       &quot;] include[&quot;+includePattern+&quot;] exclude[&quot;+excludePattern+
+                       &quot;] format[&quot;+(m_formatCompact ? &quot;compact&quot; : &quot;full&quot;) +
+                       (m_formatSort ? &quot; sort&quot; : &quot;&quot;) + &quot;]&quot;;
+
+<span class="nc" id="L128">        m_result.append(&quot;&lt;div class=\&quot;ReferredPagesPlugin\&quot;&gt;\n&quot;);</span>
+<span class="nc" id="L129">        m_result.append(&quot;&lt;a class=\&quot;wikipage\&quot; href=\&quot;&quot;+ href +</span>
+                        &quot;\&quot; title=\&quot;&quot; + title +
+                        &quot;\&quot;&gt;&quot; + rootname + &quot;&lt;/a&gt;\n&quot;);
+<span class="nc" id="L132">        m_exists.add(rootname);</span>
+
+        // pre compile all needed patterns
+        // glob compiler :  * is 0..n instance of any char  -- more convenient as input
+        // perl5 compiler : .* is 0..n instances of any char -- more powerful
+        //PatternCompiler g_compiler = new GlobCompiler();
+<span class="nc" id="L138">        PatternCompiler compiler = new Perl5Compiler();</span>
+
+        try
+        {
+<span class="nc" id="L142">            m_includePattern = compiler.compile(includePattern);</span>
+
+<span class="nc" id="L144">            m_excludePattern = compiler.compile(excludePattern);</span>
+        }
+<span class="nc" id="L146">        catch( MalformedPatternException e )</span>
+        {
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            if (m_includePattern == null )</span>
+            {
+<span class="nc" id="L150">                throw new PluginException(&quot;Illegal include pattern detected.&quot;);</span>
+            }
+<span class="nc bnc" id="L152" title="All 2 branches missed.">            else if (m_excludePattern == null )</span>
+            {
+<span class="nc" id="L154">                throw new PluginException(&quot;Illegal exclude pattern detected.&quot;);</span>
+            }
+            else
+            {
+<span class="nc" id="L158">                throw new PluginException(&quot;Illegal internal pattern detected.&quot;);</span>
+            }
+<span class="nc" id="L160">        }</span>
+
+        // go get all referred links
+<span class="nc" id="L163">        getReferredPages(context,rootname, 0);</span>
+
+        // close and finish
+<span class="nc" id="L166">        m_result.append (&quot;&lt;/div&gt;\n&quot; ) ;</span>
+
+<span class="nc" id="L168">        return m_result.toString() ;</span>
+    }
+
+
+    /**
+     * Retrieves a list of all referred pages. Is called recursively
+     * depending on the depth parameter
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private void getReferredPages( WikiContext context, String pagename, int depth )
+    {
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        if( depth &gt;= m_depth ) return;  // end of recursion</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        if( pagename == null ) return;</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        if( !m_engine.pageExists(pagename) ) return;</span>
+
+<span class="nc" id="L183">        ReferenceManager mgr = m_engine.getReferenceManager();</span>
+
+<span class="nc" id="L185">        Collection&lt;String&gt; allPages = mgr.findRefersTo( pagename );</span>
+
+<span class="nc" id="L187">        handleLinks( context, allPages, ++depth, pagename );</span>
+<span class="nc" id="L188">    }</span>
+
+    private void handleLinks(WikiContext context,Collection&lt;String&gt; links, int depth, String pagename)
+    {
+<span class="nc" id="L192">        boolean isUL = false;</span>
+<span class="nc" id="L193">        HashSet&lt;String&gt; localLinkSet = new HashSet&lt;String&gt;();  // needed to skip multiple</span>
+        // links to the same page
+<span class="nc" id="L195">        localLinkSet.add(pagename);</span>
+
+<span class="nc" id="L197">        ArrayList&lt;String&gt; allLinks = new ArrayList&lt;String&gt;();</span>
+
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        if( links != null )</span>
+<span class="nc" id="L200">            allLinks.addAll( links );</span>
+
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if( m_formatSort ) context.getEngine().getPageSorter().sort( allLinks );</span>
+
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        for( Iterator&lt;String&gt; i = allLinks.iterator(); i.hasNext(); )</span>
+        {
+<span class="nc" id="L206">            String link = i.next() ;</span>
+
+<span class="nc bnc" id="L208" title="All 2 branches missed.">            if( localLinkSet.contains( link ) ) continue; // skip multiple links to the same page</span>
+<span class="nc" id="L209">            localLinkSet.add( link );</span>
+
+<span class="nc bnc" id="L211" title="All 2 branches missed.">            if( !m_engine.pageExists( link ) ) continue; // hide links to non existing pages</span>
+
+<span class="nc bnc" id="L213" title="All 2 branches missed.">            if(  m_matcher.matches( link , m_excludePattern ) ) continue;</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">            if( !m_matcher.matches( link , m_includePattern ) ) continue;</span>
+
+<span class="nc bnc" id="L216" title="All 2 branches missed.">            if( m_exists.contains( link ) )</span>
+            {
+<span class="nc bnc" id="L218" title="All 2 branches missed.">                if( !m_formatCompact )</span>
+                {
+<span class="nc bnc" id="L220" title="All 2 branches missed.">                    if( !isUL )</span>
+                    {
+<span class="nc" id="L222">                        isUL = true; m_result.append(&quot;&lt;ul&gt;\n&quot;);</span>
+                    }
+
+                    //See https://www.w3.org/wiki/HTML_lists  for proper nesting of UL and LI
+<span class="nc" id="L226">                    m_result.append(&quot;&lt;li&gt; &quot; + link + &quot;\n&quot;);</span>
+
+<span class="nc" id="L228">                    getReferredPages( context, link, depth );  // added recursive</span>
+                                                      // call - on general
+                                                      // request
+
+<span class="nc" id="L232">                    m_result.append(&quot;\n&lt;/li&gt;\n&quot;);</span>
+
+                }
+            }
+            else
+            {
+<span class="nc bnc" id="L238" title="All 2 branches missed.">                if( !isUL )</span>
+                {
+<span class="nc" id="L240">                    isUL = true; m_result.append(&quot;&lt;ul&gt;\n&quot;);</span>
+                }
+
+<span class="nc" id="L243">                String href = context.getURL(WikiContext.VIEW,link);</span>
+<span class="nc" id="L244">                m_result.append(&quot;&lt;li&gt;&lt;a class=\&quot;wikipage\&quot; href=\&quot;&quot;+ href +&quot;\&quot;&gt;&quot;+link+&quot;&lt;/a&gt;\n&quot; );</span>
+
+<span class="nc" id="L246">                m_exists.add( link );</span>
+
+<span class="nc" id="L248">                getReferredPages( context, link, depth );</span>
+
+<span class="nc" id="L250">                m_result.append(&quot;\n&lt;/li&gt;\n&quot;);</span>
+
+            }
+<span class="nc" id="L253">        }</span>
+
+<span class="nc bnc" id="L255" title="All 2 branches missed.">        if( isUL ) m_result.append(&quot;&lt;/ul&gt;\n&quot;);</span>
+<span class="nc" id="L256">    }</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

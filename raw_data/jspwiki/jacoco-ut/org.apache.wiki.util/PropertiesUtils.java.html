@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PropertiesUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">PropertiesUtils.java</span></div><h1>PropertiesUtils.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
+
+/**
+ * some useful methods for properties
+ *
+ * @version 1.0
+ */
+public final class PropertiesUtils {
+
+    private static final String OTHER_WHITESPACE = &quot;\t\r\n\014&quot;;
+<span class="nc" id="L34">    private static final char[] HEXDIGIT = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };</span>
+
+    /** Private constructor to prevent instantiation. */
+    private PropertiesUtils()
+    {}
+
+    /**
+     * &lt;p&gt;
+     * like Properties.store, but stores the properties in sorted order
+     * &lt;/p&gt;
+     *
+     * @param properties the properties object
+     * @return String the properties, nicely formatted 
+     */
+    public static String toSortedString( Properties properties )
+    {
+        @SuppressWarnings( { &quot;unchecked&quot;, &quot;rawtypes&quot; } )
+<span class="nc" id="L51">		TreeMap&lt; String, String &gt; treemap = new TreeMap( properties );</span>
+<span class="nc" id="L52">        String string = &quot;&quot;;</span>
+<span class="nc" id="L53">        Iterator&lt; Map.Entry&lt; String, String &gt; &gt; iterator = treemap.entrySet().iterator();</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        while( iterator.hasNext() )</span>
+        {
+<span class="nc" id="L56">            Map.Entry&lt; String, String &gt; entry = iterator.next();</span>
+<span class="nc" id="L57">            String key = entry.getKey();</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            String value = entry.getValue() == null ? &quot;null&quot; : entry.getValue();</span>
+<span class="nc" id="L59">            string += toLine( key, value ) + '\n';</span>
+<span class="nc" id="L60">        }</span>
+<span class="nc" id="L61">        return string;</span>
+    }
+
+    /**
+     * Generates a property file line from a supplied key and value.
+     * @param key the property's key
+     * @param value the property's value
+     * @return the converted string
+     */
+    public static String toLine( String key, String value )
+    {
+<span class="nc" id="L72">        return saveConvert( key, true ) + '=' + saveConvert( value, false );</span>
+    }
+
+    /**
+     * Encodes a property file string from a supplied key/value line.
+     * @param string the string to encode
+     * @param encodeWhiteSpace &lt;code&gt;true&lt;/code&gt; if whitespace should be encoded also
+     * @return the converted string
+     */
+    public static String saveConvert( String string, boolean encodeWhiteSpace )
+    {
+<span class="nc" id="L83">        int i = string.length();</span>
+<span class="nc" id="L84">        StringBuilder stringbuffer = new StringBuilder( i * 2 );</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        for( int i3 = 0; i3 &lt; i; i3++ )</span>
+        {
+<span class="nc" id="L87">            char c = string.charAt( i3 );</span>
+<span class="nc bnc" id="L88" title="All 7 branches missed.">            switch( c )</span>
+            {
+                case ' ':
+<span class="nc bnc" id="L91" title="All 4 branches missed.">                    if( i3 == 0 || encodeWhiteSpace )</span>
+                    {
+<span class="nc" id="L93">                        stringbuffer.append( '\\' );</span>
+                    }
+<span class="nc" id="L95">                    stringbuffer.append( ' ' );</span>
+<span class="nc" id="L96">                    break;</span>
+                case '\\':
+<span class="nc" id="L98">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L99">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L100">                    break;</span>
+                case '\t':
+<span class="nc" id="L102">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L103">                    stringbuffer.append( 't' );</span>
+<span class="nc" id="L104">                    break;</span>
+                case '\n':
+<span class="nc" id="L106">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L107">                    stringbuffer.append( 'n' );</span>
+<span class="nc" id="L108">                    break;</span>
+                case '\r':
+<span class="nc" id="L110">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L111">                    stringbuffer.append( 'r' );</span>
+<span class="nc" id="L112">                    break;</span>
+                case '\014':
+<span class="nc" id="L114">                    stringbuffer.append( '\\' );</span>
+<span class="nc" id="L115">                    stringbuffer.append( 'f' );</span>
+<span class="nc" id="L116">                    break;</span>
+                default:
+<span class="nc bnc" id="L118" title="All 4 branches missed.">                    if( c &lt; 32 || c &gt; 126 )</span>
+                    {
+<span class="nc" id="L120">                        stringbuffer.append( '\\' );</span>
+<span class="nc" id="L121">                        stringbuffer.append( 'u' );</span>
+<span class="nc" id="L122">                        stringbuffer.append( toHex( c &gt;&gt; 12 &amp; 0xf ) );</span>
+<span class="nc" id="L123">                        stringbuffer.append( toHex( c &gt;&gt; 8 &amp; 0xf ) );</span>
+<span class="nc" id="L124">                        stringbuffer.append( toHex( c &gt;&gt; 4 &amp; 0xf ) );</span>
+<span class="nc" id="L125">                        stringbuffer.append( toHex( c &amp; 0xf ) );</span>
+                    }
+                    else
+                    {
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                        if( OTHER_WHITESPACE.indexOf( c ) != -1 )</span>
+                        {
+<span class="nc" id="L131">                            stringbuffer.append( '\\' );</span>
+                        }
+<span class="nc" id="L133">                        stringbuffer.append( c );</span>
+                    }
+            }
+        }
+<span class="nc" id="L137">        return stringbuffer.toString();</span>
+    }
+
+    private static char toHex( int i )
+    {
+<span class="nc" id="L142">        return HEXDIGIT[i &amp; 0xf];</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

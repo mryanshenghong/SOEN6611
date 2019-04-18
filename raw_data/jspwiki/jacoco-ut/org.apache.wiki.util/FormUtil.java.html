@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FormUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">FormUtil.java</span></div><h1>FormUtil.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+/**
+ * A collection of (static) utilities used by the WikiForms code.
+ * FormUtil is mainly concerned with mapping HTTP parameters to
+ * WikiPlugin parameters.
+ *
+ */
+public final class FormUtil
+{
+    /**
+     * Private constructor to prevent direct instantiation.
+     */
+    private FormUtil()
+    {
+    }
+    
+    /**
+     * &lt;p&gt;Looks for a named value in the Map. Returns either the
+     * value named by key, or values named by key.0, key.1, ...
+     * if the direct value is not found. The values are packed
+     * in an ArrayList.&lt;/p&gt;
+     * &lt;p&gt;This is a utility method, mainly used when we don't know
+     * whether there was just one value, or several, in a mapping list
+     * (e.g. an HttpRequest / FORM checkbox).&lt;/p&gt;
+     * @param params the Map container form parameters
+     * @param key the key to look up
+     * @return the List of keys
+     */
+    public static List&lt; ? &gt; getValues( Map&lt; ? , ? &gt; params, String key )
+    {
+<span class="nc bnc" id="L58" title="All 4 branches missed.">        if( params == null || key == null )</span>
+<span class="nc" id="L59">            return new ArrayList&lt;&gt;(0);</span>
+
+<span class="nc" id="L61">        Object entry = params.get( key );</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if( entry != null )</span>
+        {
+<span class="nc" id="L64">            ArrayList&lt;Object&gt; rval = new ArrayList&lt;&gt;(1);</span>
+<span class="nc" id="L65">            rval.add( entry );</span>
+<span class="nc" id="L66">            return rval;</span>
+        }
+
+<span class="nc" id="L69">        return getNumberedValues( params, key );</span>
+    }
+
+
+    /**
+     * Looks up all keys starting with a given prefix and returns
+     * the values in an ArrayList. The keys must be Strings.
+     *
+     * &lt;p&gt;For example, calling this method for a Map containing
+     * key-value pairs foo.1 = a, foo.2 = b, and foo.3 = c returns
+     * an ArrayList containing [a, b, c].
+     *
+     * &lt;p&gt;Handles both 0- and 1-indexed names. Parsing stops at the
+     * first gap in the numeric postfix.
+     *
+     * @param params a Map of string-object pairs, presumably containing
+     *               key.1, key.2,...
+     * @param keyPrefix a String prefix; values will be looked up by adding
+     *                  &quot;.0&quot;, &quot;.1&quot;, and so on, until the first gap.
+     * @return ArrayList, containing the values corresponding to the
+     *          keyPrefix, in order.
+     */
+    public static List&lt; ? &gt; getNumberedValues( Map&lt; ?, ? &gt; params, String keyPrefix )
+    {
+<span class="nc" id="L93">        ArrayList&lt;Object&gt; rval = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if( params == null || </span>
+<span class="nc bnc" id="L95" title="All 4 branches missed.">            params.size() == 0 || </span>
+            keyPrefix == null || 
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            keyPrefix.length() == 0 )</span>
+<span class="nc" id="L98">            return rval;</span>
+
+<span class="nc" id="L100">        String fullPrefix = null;</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if( keyPrefix.charAt( keyPrefix.length() - 1 ) == '.' )</span>
+<span class="nc" id="L102">            fullPrefix = keyPrefix;</span>
+        else
+<span class="nc" id="L104">            fullPrefix = keyPrefix + &quot;.&quot;;</span>
+
+<span class="nc" id="L106">        int ix = 0;</span>
+<span class="nc" id="L107">        Object value = params.get( fullPrefix + (ix++) );</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if( value == null )</span>
+<span class="nc" id="L109">            value = params.get( fullPrefix + (ix++) );</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        if( value == null )</span>
+<span class="nc" id="L111">            return rval;</span>
+        while( true )
+        {
+<span class="nc" id="L114">            rval.add( value );</span>
+<span class="nc" id="L115">            value = params.get( fullPrefix + (ix++) );</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">            if( value == null )</span>
+<span class="nc" id="L117">                break;</span>
+        }
+
+<span class="nc" id="L120">        return rval;</span>
+    }
+
+
+    /**
+     * &lt;p&gt;Converts the parameter contents of an HTTP request into a map,
+     * modifying the keys to preserve multiple values per key. This
+     * is done by adding an ordered suffix to the key:&lt;/p&gt;
+     * &lt;p&gt;&lt;pre&gt;foo=bar,baz,xyzzy&lt;/pre&gt;&lt;/p&gt;
+     * &lt;p&gt;becomes&lt;/p&gt;
+     * &lt;p&gt;&lt;pre&gt;foo.0=bar foo.1=baz foo.2=xyzzy&lt;/pre&gt;&lt;/p&gt;
+     * &lt;p&gt;If filterPrefix is specified, only keys starting with the prefix
+     * are included in the result map. If the prefix is null, all keys are
+     * checked.&lt;/p&gt;
+     * &lt;p&gt;FIX: this is not necessarily encoding-safe: see
+     * WikiContext.getHttpParameter().&lt;/p&gt;
+     * @param req the HTTP request
+     * @param filterPrefix the prefix
+     * @return the Map containing parsed key/value pairs
+     */
+    public static Map&lt; String, String &gt; requestToMap( HttpServletRequest req, String filterPrefix )
+    {
+<span class="nc" id="L142">        HashMap&lt;String,String&gt; params = new HashMap&lt;&gt;();</span>
+        
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if( filterPrefix == null ) filterPrefix = &quot;&quot;;</span>
+        
+<span class="nc" id="L146">        Enumeration&lt; String &gt; en = req.getParameterNames();</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        while( en.hasMoreElements() )</span>
+        {
+<span class="nc" id="L149">            String param = en.nextElement();</span>
+            
+<span class="nc bnc" id="L151" title="All 2 branches missed.">            if( param.startsWith( filterPrefix ) )</span>
+            {
+<span class="nc" id="L153">                String realName = param.substring( filterPrefix.length() );</span>
+<span class="nc" id="L154">                String[] values = req.getParameterValues( param );</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                if( values != null )</span>
+                {
+<span class="nc bnc" id="L157" title="All 2 branches missed.">                    if( values.length == 1 )</span>
+                    {
+<span class="nc" id="L159">                        params.put( realName, values[0] );</span>
+                    }
+                    else
+                    {
+<span class="nc bnc" id="L163" title="All 2 branches missed.">                        for( int i = 0; i &lt; values.length; i++ )</span>
+                        {
+<span class="nc bnc" id="L165" title="All 4 branches missed.">                            if( values[i] != null &amp;&amp; values[i].length() &gt; 0 )</span>
+                            {
+<span class="nc" id="L167">                                params.put( realName + &quot;.&quot; + i, values[i] );</span>
+                            }
+                        }
+                    }
+                }
+            }
+<span class="nc" id="L173">        }</span>
+
+<span class="nc" id="L175">        return params;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

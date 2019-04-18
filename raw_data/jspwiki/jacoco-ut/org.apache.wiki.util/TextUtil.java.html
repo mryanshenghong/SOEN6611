@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TextUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">TextUtil.java</span></div><h1>TextUtil.java</h1><pre class="source lang-java linenums">/*
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+ */
+package org.apache.wiki.util;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Properties;
+import java.util.Random;
+
+import org.apache.commons.lang.StringUtils;
+
+
+/**
+ *  Contains a number of static utility methods.
+ */
+public final class TextUtil {
+
+    static final String   HEX_DIGITS = &quot;0123456789ABCDEF&quot;;
+
+    /**
+     *  Private constructor prevents instantiation.
+     */
+    private TextUtil() {}
+
+    /**
+     *  java.net.URLEncoder.encode() method in JDK &lt; 1.4 is buggy.  This duplicates
+     *  its functionality.
+     *  @param rs the string to encode
+     *  @return the URL-encoded string
+     */
+    protected static String urlEncode( byte[] rs ) {
+<span class="fc" id="L51">    	StringBuilder result = new StringBuilder(rs.length*2);</span>
+
+        // Does the URLEncoding.  We could use the java.net one, but
+        // it does not eat byte[]s.
+
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        for( int i = 0; i &lt; rs.length; i++ ) {</span>
+<span class="fc" id="L57">            char c = ( char )rs[i];</span>
+
+<span class="fc bfc" id="L59" title="All 3 branches covered.">            switch( c ) {</span>
+              case '_':
+              case '.':
+              case '*':
+              case '-':
+              case '/':
+<span class="fc" id="L65">                result.append( c );</span>
+<span class="fc" id="L66">                break;</span>
+
+              case ' ':
+<span class="fc" id="L69">                result.append( '+' );</span>
+<span class="fc" id="L70">                break;</span>
+
+              default:
+<span class="fc bfc" id="L73" title="All 12 branches covered.">                if( ( c &gt;= 'a' &amp;&amp; c &lt;= 'z' ) ||</span>
+                    ( c &gt;= 'A' &amp;&amp; c &lt;= 'Z' ) ||
+                    ( c &gt;= '0' &amp;&amp; c &lt;= '9' ) ) {
+<span class="fc" id="L76">                    result.append( c );</span>
+                } else {
+<span class="fc" id="L78">                    result.append( '%' );</span>
+<span class="fc" id="L79">                    result.append( HEX_DIGITS.charAt( ( c &amp; 0xF0 ) &gt;&gt; 4 ) );</span>
+<span class="fc" id="L80">                    result.append( HEX_DIGITS.charAt( c &amp; 0x0F ) );</span>
+                }
+            }
+
+        } // for
+
+<span class="fc" id="L86">        return result.toString();</span>
+    }
+
+    /**
+     *  URL encoder does not handle all characters correctly.
+     *  See &lt;A HREF=&quot;http://developer.java.sun.com/developer/bugParade/bugs/4257115.html&quot;&gt;
+     *  Bug parade, bug #4257115&lt;/A&gt; for more information.
+     *  &lt;P&gt;
+     *  Thanks to CJB for this fix.
+     *
+     *  @param bytes The byte array containing the bytes of the string
+     *  @param encoding The encoding in which the string should be interpreted
+     *  @return A decoded String
+     *
+     *  @throws IllegalArgumentException If the byte array is not a valid string.
+     */
+    protected static String urlDecode( byte[] bytes, String encoding ) throws  IllegalArgumentException {
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        if( bytes == null ) {</span>
+<span class="nc" id="L104">            return null;</span>
+        }
+
+<span class="fc" id="L107">        byte[] decodeBytes   = new byte[bytes.length];</span>
+<span class="fc" id="L108">        int decodedByteCount = 0;</span>
+
+        try {
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            for( int count = 0; count &lt; bytes.length; count++ ) {</span>
+<span class="fc bfc" id="L112" title="All 3 branches covered.">                switch( bytes[count] ) {</span>
+                  case '+':
+<span class="fc" id="L114">                    decodeBytes[decodedByteCount++] = ( byte ) ' ';</span>
+<span class="fc" id="L115">                    break ;</span>
+
+                  case '%':
+<span class="fc" id="L118">                    decodeBytes[decodedByteCount++] = ( byte )( ( HEX_DIGITS.indexOf( bytes[++count] ) &lt;&lt; 4 ) +</span>
+<span class="fc" id="L119">                                                                ( HEX_DIGITS.indexOf( bytes[++count] ) ) );</span>
+<span class="fc" id="L120">                    break ;</span>
+
+                  default:
+<span class="fc" id="L123">                    decodeBytes[decodedByteCount++] = bytes[count] ;</span>
+                }
+            }
+
+<span class="nc" id="L127">        } catch( IndexOutOfBoundsException ae ) {</span>
+<span class="nc" id="L128">            throw new IllegalArgumentException( &quot;Malformed UTF-8 string?&quot; );</span>
+<span class="fc" id="L129">        }</span>
+
+<span class="fc" id="L131">        return new String(decodeBytes, 0, decodedByteCount, Charset.forName( encoding ) );</span>
+    }
+
+    /**
+     *  As java.net.URLEncoder class, but this does it in UTF8 character set.
+     *
+     *  @param text The text to decode
+     *  @return An URLEncoded string.
+     */
+    public static String urlEncodeUTF8( String text ) {
+        // If text is null, just return an empty string
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if ( text == null ) {</span>
+<span class="nc" id="L143">            return &quot;&quot;;</span>
+        }
+
+<span class="fc" id="L146">        byte[] rs = text.getBytes( StandardCharsets.UTF_8 );</span>
+<span class="fc" id="L147">        return urlEncode( rs );</span>
+    }
+
+    /**
+     *  As java.net.URLDecoder class, but for UTF-8 strings.  null is a safe value and returns null.
+     *
+     *  @param utf8 The UTF-8 encoded string
+     *  @return A plain, normal string.
+     */
+    public static String urlDecodeUTF8( String utf8 ) {
+<span class="fc bfc" id="L157" title="All 2 branches covered.">        if( utf8 == null ) {</span>
+<span class="fc" id="L158">            return null;</span>
+        }
+
+<span class="fc" id="L161">        return urlDecode( utf8.getBytes( StandardCharsets.ISO_8859_1 ), StandardCharsets.UTF_8.toString() );</span>
+    }
+
+    /**
+     * Provides encoded version of string depending on encoding. Encoding may be UTF-8 or ISO-8859-1 (default).
+     *
+     * &lt;p&gt;This implementation is the same as in FileSystemProvider.mangleName().
+     *
+     * @param data A string to encode
+     * @param encoding The encoding in which to encode
+     * @return An URL encoded string.
+     */
+    public static String urlEncode( String data, String encoding ) {
+        // Presumably, the same caveats apply as in FileSystemProvider.
+        // Don't see why it would be horribly kludgy, though.
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if( StandardCharsets.UTF_8.toString().equals( encoding ) ) {</span>
+<span class="fc" id="L177">            return urlEncodeUTF8( data );</span>
+        }
+
+<span class="fc" id="L180">        return urlEncode( data.getBytes( Charset.forName( encoding ) ) );</span>
+    }
+
+    /**
+     * Provides decoded version of string depending on encoding. Encoding may be UTF-8 or ISO-8859-1 (default).
+     *
+     * &lt;p&gt;This implementation is the same as in FileSystemProvider.unmangleName().
+     *
+     * @param data The URL-encoded string to decode
+     * @param encoding The encoding to use
+     * @return A decoded string.
+     * @throws IllegalArgumentException If the data cannot be decoded.
+     */
+    public static String urlDecode( String data, String encoding ) throws IllegalArgumentException {
+        // Presumably, the same caveats apply as in FileSystemProvider.
+        // Don't see why it would be horribly kludgy, though.
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if( &quot;UTF-8&quot;.equals( encoding ) ) {</span>
+<span class="nc" id="L197">            return urlDecodeUTF8( data );</span>
+        }
+
+<span class="fc" id="L200">        return urlDecode( data.getBytes( Charset.forName( encoding ) ), encoding );</span>
+    }
+
+    /**
+     *  Replaces the relevant entities inside the String. All &amp;amp; &amp;gt;, &amp;lt;, and &amp;quot; are replaced by their
+     *  respective names.
+     *
+     *  @since 1.6.1
+     *  @param src The source string.
+     *  @return The encoded string.
+     */
+    public static String replaceEntities( String src ) {
+<span class="fc" id="L212">        src = replaceString( src, &quot;&amp;&quot;, &quot;&amp;amp;&quot; );</span>
+<span class="fc" id="L213">        src = replaceString( src, &quot;&lt;&quot;, &quot;&amp;lt;&quot; );</span>
+<span class="fc" id="L214">        src = replaceString( src, &quot;&gt;&quot;, &quot;&amp;gt;&quot; );</span>
+<span class="fc" id="L215">        src = replaceString( src, &quot;\&quot;&quot;, &quot;&amp;quot;&quot; );</span>
+
+<span class="fc" id="L217">        return src;</span>
+    }
+
+    /**
+     *  Replaces a string with an other string.
+     *
+     *  @param orig Original string.  Null is safe.
+     *  @param src  The string to find.
+     *  @param dest The string to replace &lt;I&gt;src&lt;/I&gt; with.
+     *  @return A string with the replacement done.
+     */
+    public static String replaceString( String orig, String src, String dest ) {
+<span class="fc bfc" id="L229" title="All 2 branches covered.">        if ( orig == null ) return null;</span>
+<span class="pc bpc" id="L230" title="2 of 4 branches missed.">        if ( src == null || dest == null ) throw new NullPointerException();</span>
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">        if ( src.length() == 0 ) return orig;</span>
+
+<span class="fc" id="L233">        StringBuilder res = new StringBuilder( orig.length() + 20 ); // Pure guesswork</span>
+<span class="fc" id="L234">        int start = 0;</span>
+<span class="fc" id="L235">        int end = 0;</span>
+<span class="fc" id="L236">        int last = 0;</span>
+
+<span class="fc bfc" id="L238" title="All 2 branches covered.">        while ( ( start = orig.indexOf( src,end ) ) != -1 ) {</span>
+<span class="fc" id="L239">            res.append( orig.substring( last, start ) );</span>
+<span class="fc" id="L240">            res.append( dest );</span>
+<span class="fc" id="L241">            end  = start + src.length();</span>
+<span class="fc" id="L242">            last = start + src.length();</span>
+        }
+
+<span class="fc" id="L245">        res.append( orig.substring( end ) );</span>
+
+<span class="fc" id="L247">        return res.toString();</span>
+    }
+
+    /**
+     *  Replaces a part of a string with a new String.
+     *
+     *  @param start Where in the original string the replacing should start.
+     *  @param end Where the replacing should end.
+     *  @param orig Original string.  Null is safe.
+     *  @param text The new text to insert into the string.
+     *  @return The string with the orig replaced with text.
+     */
+    public static String replaceString( String orig, int start, int end, String text ) {
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">        if( orig == null ) return null;</span>
+
+<span class="fc" id="L262">        StringBuilder buf = new StringBuilder(orig);</span>
+<span class="fc" id="L263">        buf.replace( start, end, text );</span>
+<span class="fc" id="L264">        return buf.toString();</span>
+    }
+
+    /**
+     *  Replaces a string with an other string. Case insensitive matching is used
+     *
+     *  @param orig Original string.  Null is safe.
+     *  @param src  The string to find.
+     *  @param dest The string to replace &lt;I&gt;src&lt;/I&gt; with.
+     *  @return A string with all instances of src replaced with dest.
+     */
+    public static String replaceStringCaseUnsensitive( String orig, String src, String dest ) {
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">        if( orig == null ) return null;</span>
+
+<span class="fc" id="L278">        StringBuilder res = new StringBuilder();</span>
+<span class="fc" id="L279">        int start        = 0;</span>
+<span class="fc" id="L280">        int end          = 0;</span>
+<span class="fc" id="L281">        int last         = 0;</span>
+
+<span class="fc" id="L283">        String origCaseUnsn = orig.toLowerCase();</span>
+<span class="fc" id="L284">        String srcCaseUnsn = src.toLowerCase();</span>
+
+<span class="fc bfc" id="L286" title="All 2 branches covered.">        while( ( start = origCaseUnsn.indexOf( srcCaseUnsn, end ) ) != -1 ) {</span>
+<span class="fc" id="L287">            res.append( orig.substring( last, start ) );</span>
+<span class="fc" id="L288">            res.append( dest );</span>
+<span class="fc" id="L289">            end  = start + src.length();</span>
+<span class="fc" id="L290">            last = start + src.length();</span>
+        }
+
+<span class="fc" id="L293">        res.append( orig.substring( end ) );</span>
+
+<span class="fc" id="L295">        return res.toString();</span>
+    }
+
+    /**
+     *  Parses an integer parameter, returning a default value if the value is null or a non-number.
+     *
+     *  @param value The value to parse
+     *  @param defvalue A default value in case the value is not a number
+     *  @return The parsed value (or defvalue).
+     */
+    public static int parseIntParameter( String value, int defvalue ) {
+<span class="fc" id="L306">        int val = defvalue;</span>
+
+        try {
+<span class="fc" id="L309">            val = Integer.parseInt( value.trim() );</span>
+<span class="fc" id="L310">        } catch( Exception e ) {}</span>
+
+<span class="fc" id="L312">        return val;</span>
+    }
+
+    /**
+     *  Gets an integer-valued property from a standard Properties list.
+     *
+     *  Before inspecting the props, we first check if there is a Java System Property with the same name, if it exists
+     *  we use that value, if not we check an environment variable with that (almost) same name, almost meaning we replace
+     *  dots with underscores.
+     *
+     *  If the value does not exist, or is a
+     *  non-integer, returns defVal.
+     *
+     *  @since 2.1.48.
+     *  @param props The property set to look through
+     *  @param key   The key to look for
+     *  @param defVal If the property is not found or is a non-integer, returns this value.
+     *  @return The property value as an integer (or defVal).
+     */
+    public static int getIntegerProperty( Properties props,  String key, int defVal ) {
+<span class="fc" id="L332">        String val = System.getProperties().getProperty(key, System.getenv(StringUtils.replace(key,&quot;.&quot;,&quot;_&quot;)));</span>
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">        if (val == null) {</span>
+<span class="fc" id="L334">            val = props.getProperty(key);</span>
+        }
+<span class="fc" id="L336">        return parseIntParameter( val, defVal );</span>
+    }
+
+    /**
+     *  Gets a boolean property from a standard Properties list. Returns the default value, in case the key has not
+     *  been set.
+     *  Before inspecting the props, we first check if there is a Java System Property with the same name, if it exists
+     *  we use that value, if not we check an environment variable with that (almost) same name, almost meaning we replace
+     *  dots with underscores.
+     *  &lt;P&gt;
+     *  The possible values for the property are &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;on&quot;/&quot;off&quot;.  Any value not
+     *  recognized is always defined as &quot;false&quot;.
+     *
+     *  @param props   A list of properties to search.
+     *  @param key     The property key.
+     *  @param defval  The default value to return.
+     *
+     *  @return True, if the property &quot;key&quot; was set to &quot;true&quot;, &quot;on&quot;, or &quot;yes&quot;.
+     *
+     *  @since 2.0.11
+     */
+    public static boolean getBooleanProperty( Properties props, String key, boolean defval ) {
+<span class="fc" id="L358">        String val = System.getProperties().getProperty(key, System.getenv(StringUtils.replace(key,&quot;.&quot;,&quot;_&quot;)));</span>
+<span class="pc bpc" id="L359" title="1 of 2 branches missed.">        if (val == null) {</span>
+<span class="fc" id="L360">            val = props.getProperty(key);</span>
+        }
+<span class="fc bfc" id="L362" title="All 2 branches covered.">        if( val == null ) {</span>
+<span class="fc" id="L363">            return defval;</span>
+        }
+
+<span class="fc" id="L366">        return isPositive( val );</span>
+    }
+
+    /**
+     *  Fetches a String property from the set of Properties.  This differs from Properties.getProperty() in a
+     *  couple of key respects: First, property value is trim()med (so no extra whitespace back and front).
+     *
+     *  Before inspecting the props, we first check if there is a Java System Property with the same name, if it exists
+     *  we use that value, if not we check an environment variable with that (almost) same name, almost meaning we replace
+     *  dots with underscores.
+     *
+     *  @param props The Properties to search through
+     *  @param key   The property key
+     *  @param defval A default value to return, if the property does not exist.
+     *  @return The property value.
+     *  @since 2.1.151
+     */
+    public static String getStringProperty(Properties props, String key, String defval) {
+<span class="fc" id="L384">        String val = System.getProperties().getProperty(key, System.getenv(StringUtils.replace(key,&quot;.&quot;,&quot;_&quot;)));</span>
+<span class="pc bpc" id="L385" title="1 of 2 branches missed.">        if (val == null) {</span>
+<span class="fc" id="L386">            val = props.getProperty(key);</span>
+        }
+<span class="fc bfc" id="L388" title="All 2 branches covered.">        if (val == null) {</span>
+<span class="fc" id="L389">            return defval;</span>
+        }
+<span class="fc" id="L391">        return val.trim();</span>
+    }
+
+    /**
+     *  Fetches a file path property from the set of Properties.
+     *
+     *  Before inspecting the props, we first check if there is a Java System Property with the same name, if it exists
+     *  we use that value, if not we check an environment variable with that (almost) same name, almost meaning we replace
+     *  dots with underscores.
+     *
+     *  If the implementation fails to create the canonical path it just returns
+     *  the original value of the property which is a bit doggy.
+     *
+     *  @param props The Properties to search through
+     *  @param key   The property key
+     *  @param defval A default value to return, if the property does not exist.
+     *  @return the canonical path of the file or directory being referenced
+     *  @since 2.10.1
+     */
+    public static String getCanonicalFilePathProperty(Properties props, String key, String defval) {
+
+        String result;
+<span class="fc" id="L413">        String val = System.getProperties().getProperty(key, System.getenv(StringUtils.replace(key,&quot;.&quot;,&quot;_&quot;)));</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">        if (val == null) {</span>
+<span class="fc" id="L415">            val = props.getProperty(key);</span>
+        }
+
+<span class="fc bfc" id="L418" title="All 2 branches covered.">        if( val == null ) {</span>
+<span class="fc" id="L419">            val = defval;</span>
+        }
+
+        try {
+<span class="fc" id="L423">            result = new File(new File(val.trim()).getCanonicalPath()).getAbsolutePath();</span>
+        }
+<span class="nc" id="L425">        catch(IOException e) {</span>
+<span class="nc" id="L426">            result = val.trim();</span>
+<span class="fc" id="L427">        }</span>
+<span class="fc" id="L428">        return result;</span>
+    }
+
+    /**
+     *  Returns true, if the string &quot;val&quot; denotes a positive string.  Allowed values are &quot;yes&quot;, &quot;on&quot;, and &quot;true&quot;.
+     *  Comparison is case-insignificant. Null values are safe.
+     *
+     *  @param val Value to check.
+     *  @return True, if val is &quot;true&quot;, &quot;on&quot;, or &quot;yes&quot;; otherwise false.
+     *
+     *  @since 2.0.26
+     */
+    public static boolean isPositive( String val ) {
+<span class="fc bfc" id="L441" title="All 2 branches covered.">        if( val == null ) {</span>
+<span class="fc" id="L442">        	return false;</span>
+        }
+<span class="fc" id="L444">        val = val.trim();</span>
+<span class="fc bfc" id="L445" title="All 6 branches covered.">        return val.equalsIgnoreCase( &quot;true&quot; ) || val.equalsIgnoreCase( &quot;on&quot; ) || val.equalsIgnoreCase( &quot;yes&quot; );</span>
+    }
+
+    /**
+     *  Makes sure that the POSTed data is conforms to certain rules.  These rules are:
+     *  &lt;UL&gt;
+     *  &lt;LI&gt;The data always ends with a newline (some browsers, such as NS4.x series, does not send a newline at
+     *      the end, which makes the diffs a bit strange sometimes.
+     *  &lt;LI&gt;The CR/LF/CRLF mess is normalized to plain CRLF.
+     *  &lt;/UL&gt;
+     *
+     *  The reason why we're using CRLF is that most browser already return CRLF since that is the closest thing to
+     *  a HTTP standard.
+     *
+     *  @param postData The data to normalize
+     *  @return Normalized data
+     */
+    public static String normalizePostData( String postData ) {
+<span class="fc" id="L463">        StringBuilder sb = new StringBuilder();</span>
+
+<span class="fc bfc" id="L465" title="All 2 branches covered.">        for( int i = 0; i &lt; postData.length(); i++ ) {</span>
+<span class="fc bfc" id="L466" title="All 3 branches covered.">            switch( postData.charAt(i) ) {</span>
+              case 0x0a: // LF, UNIX
+<span class="fc" id="L468">                sb.append( &quot;\r\n&quot; );</span>
+<span class="fc" id="L469">                break;</span>
+
+              case 0x0d: // CR, either Mac or MSDOS
+<span class="fc" id="L472">                sb.append( &quot;\r\n&quot; );</span>
+                // If it's MSDOS, skip the LF so that we don't add it again.
+<span class="fc bfc" id="L474" title="All 4 branches covered.">                if( i &lt; postData.length() - 1 &amp;&amp; postData.charAt( i + 1 ) == 0x0a ) {</span>
+<span class="fc" id="L475">                    i++;</span>
+                }
+                break;
+
+              default:
+<span class="fc" id="L480">                sb.append( postData.charAt(i) );</span>
+                break;
+            }
+        }
+
+<span class="fc bfc" id="L485" title="All 4 branches covered.">        if( sb.length() &lt; 2 || !sb.substring( sb.length()-2 ).equals( &quot;\r\n&quot; ) ) {</span>
+<span class="fc" id="L486">            sb.append( &quot;\r\n&quot; );</span>
+        }
+
+<span class="fc" id="L489">        return sb.toString();</span>
+    }
+
+    private static final int EOI   = 0;
+    private static final int LOWER = 1;
+    private static final int UPPER = 2;
+    private static final int DIGIT = 3;
+    private static final int OTHER = 4;
+<span class="fc" id="L497">    private static final Random RANDOM = new SecureRandom();</span>
+
+    private static int getCharKind( int c ) {
+<span class="fc bfc" id="L500" title="All 2 branches covered.">        if( c == -1 ) {</span>
+<span class="fc" id="L501">            return EOI;</span>
+        }
+
+<span class="fc" id="L504">        char ch = ( char )c;</span>
+
+<span class="fc bfc" id="L506" title="All 2 branches covered.">        if( Character.isLowerCase( ch ) ) {</span>
+<span class="fc" id="L507">            return LOWER;</span>
+<span class="fc bfc" id="L508" title="All 2 branches covered.">        } else if( Character.isUpperCase( ch ) ) {</span>
+<span class="fc" id="L509">            return UPPER;</span>
+<span class="fc bfc" id="L510" title="All 2 branches covered.">        } else if( Character.isDigit( ch ) ) {</span>
+<span class="fc" id="L511">            return DIGIT;</span>
+        } else {
+<span class="fc" id="L513">            return OTHER;</span>
+        }
+    }
+
+    /**
+     *  Adds spaces in suitable locations of the input string.  This is used to transform a WikiName into a more
+     *  readable format.
+     *
+     *  @param s String to be beautified.
+     *  @return A beautified string.
+     */
+    public static String beautifyString( String s ) {
+<span class="fc" id="L525">        return beautifyString( s, &quot; &quot; );</span>
+    }
+
+    /**
+     *  Adds spaces in suitable locations of the input string.  This is used to transform a WikiName into a more
+     *  readable format.
+     *
+     *  @param s String to be beautified.
+     *  @param space Use this string for the space character.
+     *  @return A beautified string.
+     *  @since 2.1.127
+     */
+    public static String beautifyString( String s, String space ) {
+<span class="pc bpc" id="L538" title="2 of 4 branches missed.">        if( s == null || s.length() == 0 ) {</span>
+<span class="nc" id="L539">        	return &quot;&quot;;</span>
+        }
+
+<span class="fc" id="L542">        StringBuilder result = new StringBuilder();</span>
+
+<span class="fc" id="L544">        int cur     = s.charAt( 0 );</span>
+<span class="fc" id="L545">        int curKind = getCharKind( cur );</span>
+
+<span class="fc" id="L547">        int prevKind = LOWER;</span>
+<span class="fc" id="L548">        int nextKind = -1;</span>
+
+<span class="fc" id="L550">        int next = -1;</span>
+<span class="fc" id="L551">        int nextPos = 1;</span>
+
+<span class="fc bfc" id="L553" title="All 2 branches covered.">        while( curKind != EOI ) {</span>
+<span class="fc bfc" id="L554" title="All 2 branches covered.">            next = ( nextPos &lt; s.length() ) ? s.charAt( nextPos++ ) : -1;</span>
+<span class="fc" id="L555">            nextKind = getCharKind( next );</span>
+
+<span class="fc bfc" id="L557" title="All 6 branches covered.">            if( ( prevKind == UPPER ) &amp;&amp; ( curKind == UPPER ) &amp;&amp; ( nextKind == LOWER ) ) {</span>
+<span class="fc" id="L558">                result.append( space );</span>
+<span class="fc" id="L559">                result.append( ( char ) cur );</span>
+            } else {
+<span class="fc" id="L561">                result.append((char) cur );</span>
+<span class="pc bpc" id="L562" title="3 of 16 branches missed.">                if( ( ( curKind == UPPER ) &amp;&amp; (nextKind == DIGIT) )</span>
+                    || ( ( curKind == LOWER ) &amp;&amp; ( ( nextKind == DIGIT ) || ( nextKind == UPPER ) ) )
+                    || ( ( curKind == DIGIT ) &amp;&amp; ( ( nextKind == UPPER ) || ( nextKind == LOWER ) ) ) ) {
+<span class="fc" id="L565">                    result.append( space );</span>
+                }
+            }
+<span class="fc" id="L568">            prevKind = curKind;</span>
+<span class="fc" id="L569">            cur      = next;</span>
+<span class="fc" id="L570">            curKind  = nextKind;</span>
+        }
+
+<span class="fc" id="L573">        return result.toString();</span>
+    }
+
+    /**
+     *  Creates a Properties object based on an array which contains alternatively a key and a value.  It is useful
+     *  for generating default mappings. For example:
+     *  &lt;pre&gt;
+     *     String[] properties = { &quot;jspwiki.property1&quot;, &quot;value1&quot;,
+     *                             &quot;jspwiki.property2&quot;, &quot;value2 };
+     *
+     *     Properties props = TextUtil.createPropertes( values );
+     *
+     *     System.out.println( props.getProperty(&quot;jspwiki.property1&quot;) );
+     *  &lt;/pre&gt;
+     *  would output &quot;value1&quot;.
+     *
+     *  @param values Alternating key and value pairs.
+     *  @return Property object
+     *  @see java.util.Properties
+     *  @throws IllegalArgumentException if the property array is missing a value for a key.
+     *  @since 2.2.
+     */
+    public static Properties createProperties( String[] values ) throws IllegalArgumentException {
+<span class="pc bpc" id="L596" title="1 of 2 branches missed.">        if( values.length % 2 != 0 ) {</span>
+<span class="nc" id="L597">        	throw new IllegalArgumentException( &quot;One value is missing.&quot;);</span>
+        }
+
+<span class="fc" id="L600">        Properties props = new Properties();</span>
+<span class="fc bfc" id="L601" title="All 2 branches covered.">        for( int i = 0; i &lt; values.length; i += 2 ) {</span>
+<span class="fc" id="L602">            props.setProperty( values[i], values[i + 1] );</span>
+        }
+
+<span class="fc" id="L605">        return props;</span>
+    }
+
+    /**
+     *  Counts the number of sections (separated with &quot;----&quot;) from the page.
+     *
+     *  @param pagedata The WikiText to parse.
+     *  @return int Number of counted sections.
+     *  @since 2.1.86.
+     */
+    public static int countSections( String pagedata ) {
+<span class="nc" id="L616">        int tags  = 0;</span>
+<span class="nc" id="L617">        int start = 0;</span>
+
+<span class="nc bnc" id="L619" title="All 2 branches missed.">        while( ( start = pagedata.indexOf( &quot;----&quot;, start ) ) != -1 ) {</span>
+<span class="nc" id="L620">            tags++;</span>
+<span class="nc" id="L621">            start += 4; // Skip this &quot;----&quot;</span>
+        }
+
+        //
+        // The first section does not get the &quot;----&quot;
+        //
+<span class="nc bnc" id="L627" title="All 2 branches missed.">        return pagedata.length() &gt; 0 ? tags + 1 : 0;</span>
+    }
+
+    /**
+     *  Gets the given section (separated with &quot;----&quot;) from the page text.
+     *  Note that the first section is always #1.  If a page has no section markers,
+     *  then there is only a single section, #1.
+     *
+     *  @param pagedata WikiText to parse.
+     *  @param section  Which section to get.
+     *  @return String  The section.
+     *  @throws IllegalArgumentException If the page does not contain this many sections.
+     *  @since 2.1.86.
+     */
+    public static String getSection( String pagedata, int section ) throws IllegalArgumentException {
+<span class="fc" id="L642">        int tags  = 0;</span>
+<span class="fc" id="L643">        int start = 0;</span>
+<span class="fc" id="L644">        int previous = 0;</span>
+
+<span class="fc bfc" id="L646" title="All 2 branches covered.">        while( ( start = pagedata.indexOf( &quot;----&quot;, start ) ) != -1 ) {</span>
+<span class="fc bfc" id="L647" title="All 2 branches covered.">            if( ++tags == section ) {</span>
+<span class="fc" id="L648">                return pagedata.substring( previous, start );</span>
+            }
+
+<span class="fc" id="L651">            start += 4; // Skip this &quot;----&quot;</span>
+            // allow additional dashes, treat it as if it was a correct 4-dash
+<span class="fc bfc" id="L653" title="All 4 branches covered.">            while (start &lt; pagedata.length() &amp;&amp; pagedata.charAt( start ) == '-') {</span>
+<span class="fc" id="L654">                start++;</span>
+            }
+
+<span class="fc" id="L657">            previous = start;</span>
+        }
+
+<span class="fc bfc" id="L660" title="All 2 branches covered.">        if( ++tags == section ) {</span>
+<span class="fc" id="L661">            return pagedata.substring( previous );</span>
+        }
+
+<span class="fc" id="L664">        throw new IllegalArgumentException( &quot;There is no section no. &quot; + section + &quot; on the page.&quot; );</span>
+    }
+
+    /**
+     *  A simple routine which just repeates the arguments.  This is useful for creating something like a line or
+     *  something.
+     *
+     *  @param what String to repeat
+     *  @param times How many times to repeat the string.
+     *  @return Guess what?
+     *  @since 2.1.98.
+     */
+    public static String repeatString( String what, int times ) {
+<span class="nc" id="L677">    	StringBuilder sb = new StringBuilder();</span>
+<span class="nc bnc" id="L678" title="All 2 branches missed.">        for( int i = 0; i &lt; times; i++ ) {</span>
+<span class="nc" id="L679">            sb.append( what );</span>
+        }
+
+<span class="nc" id="L682">        return sb.toString();</span>
+    }
+
+    /**
+     *  Converts a string from the Unicode representation into something that can be embedded in a java
+     *  properties file.  All references outside the ASCII range are replaced with \\uXXXX.
+     *
+     *  @param s The string to convert
+     *  @return the ASCII string
+     */
+    public static String native2Ascii( String s ) {
+<span class="fc" id="L693">    	StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L694" title="All 2 branches covered.">        for( int i = 0; i &lt; s.length(); i++ ) {</span>
+<span class="fc" id="L695">            char aChar = s.charAt(i);</span>
+<span class="pc bpc" id="L696" title="2 of 4 branches missed.">            if( ( aChar &lt; 0x0020 ) || ( aChar &gt; 0x007e ) ) {</span>
+<span class="nc" id="L697">                sb.append( '\\');</span>
+<span class="nc" id="L698">                sb.append( 'u');</span>
+<span class="nc" id="L699">                sb.append( toHex( ( aChar &gt;&gt; 12 ) &amp; 0xF ) );</span>
+<span class="nc" id="L700">                sb.append( toHex( ( aChar &gt;&gt;  8 ) &amp; 0xF ) );</span>
+<span class="nc" id="L701">                sb.append( toHex( ( aChar &gt;&gt;  4 ) &amp; 0xF ) );</span>
+<span class="nc" id="L702">                sb.append( toHex( aChar        &amp; 0xF ) );</span>
+            } else {
+<span class="fc" id="L704">                sb.append( aChar );</span>
+            }
+        }
+<span class="fc" id="L707">        return sb.toString();</span>
+    }
+
+    private static char toHex( int nibble ) {
+<span class="fc" id="L711">        final char[] hexDigit = {</span>
+            '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+        };
+<span class="fc" id="L714">        return hexDigit[nibble &amp; 0xF];</span>
+    }
+
+    /**
+     *  Generates a hexadecimal string from an array of bytes.  For example, if the array contains
+     *  { 0x01, 0x02, 0x3E }, the resulting string will be &quot;01023E&quot;.
+     *
+     * @param bytes A Byte array
+     * @return A String representation
+     * @since 2.3.87
+     */
+    public static String toHexString( byte[] bytes ) {
+<span class="fc" id="L726">    	StringBuilder sb = new StringBuilder( bytes.length * 2 );</span>
+<span class="fc bfc" id="L727" title="All 2 branches covered.">        for( int i = 0; i &lt; bytes.length; i++ ) {</span>
+<span class="fc" id="L728">            sb.append( toHex( bytes[i] &gt;&gt; 4 ) );</span>
+<span class="fc" id="L729">            sb.append( toHex( bytes[i] ) );</span>
+        }
+
+<span class="fc" id="L732">        return sb.toString();</span>
+    }
+
+    /**
+     *  Returns true, if the argument contains a number, otherwise false. In a quick test this is roughly the same
+     *  speed as Integer.parseInt() if the argument is a number, and roughly ten times the speed, if the argument
+     *  is NOT a number.
+     *
+     *  @since 2.4
+     *  @param s String to check
+     *  @return True, if s represents a number.  False otherwise.
+     */
+    public static boolean isNumber( String s ) {
+<span class="pc bpc" id="L745" title="1 of 2 branches missed.">        if( s == null ) {</span>
+<span class="nc" id="L746">        	return false;</span>
+        }
+
+<span class="fc bfc" id="L749" title="All 4 branches covered.">        if( s.length() &gt; 1 &amp;&amp; s.charAt(0) == '-' ) {</span>
+<span class="fc" id="L750">        	s = s.substring(1);</span>
+        }
+
+<span class="fc bfc" id="L753" title="All 2 branches covered.">        for( int i = 0; i &lt; s.length(); i++ ) {</span>
+<span class="fc bfc" id="L754" title="All 2 branches covered.">            if( !Character.isDigit( s.charAt( i ) ) ) {</span>
+<span class="fc" id="L755">            	return false;</span>
+            }
+        }
+
+<span class="fc" id="L759">        return true;</span>
+    }
+
+    /** Length of password. @see #generateRandomPassword() */
+    public static final int PASSWORD_LENGTH = 8;
+
+    /**
+     * Generate a random String suitable for use as a temporary password.
+     *
+     * @return String suitable for use as a temporary password
+     * @since 2.4
+     */
+    public static String generateRandomPassword() {
+        // Pick from some letters that won't be easily mistaken for each
+        // other. So, for example, omit o O and 0, 1 l and L.
+<span class="fc" id="L774">        String letters = &quot;abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789+@&quot;;</span>
+
+<span class="fc" id="L776">        String pw = &quot;&quot;;</span>
+<span class="fc bfc" id="L777" title="All 2 branches covered.">        for( int i = 0; i &lt; PASSWORD_LENGTH; i++ ) {</span>
+<span class="fc" id="L778">            int index = ( int )( RANDOM.nextDouble() * letters.length() );</span>
+<span class="fc" id="L779">            pw += letters.substring( index, index + 1 );</span>
+        }
+<span class="fc" id="L781">        return pw;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

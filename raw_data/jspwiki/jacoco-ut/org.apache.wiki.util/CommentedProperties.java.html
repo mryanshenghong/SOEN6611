@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CommentedProperties.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Apache JSPWiki Main Jar</a> &gt; <a href="index.source.html" class="el_package">org.apache.wiki.util</a> &gt; <span class="el_source">CommentedProperties.java</span></div><h1>CommentedProperties.java</h1><pre class="source lang-java linenums">/* 
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    &quot;License&quot;); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.  
+ */
+package org.apache.wiki.util;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+
+/**
+ * Extends {@link java.util.Properties} by providing support for comment
+ * preservation. When the properties are written to disk, previous
+ * comments present in the file are preserved.
+ * @since 2.4.22
+ */
+public class CommentedProperties extends Properties
+{
+    private static final long serialVersionUID = 8057284636436329669L;
+
+    private String m_propertyString;
+
+    /**
+     * @see java.util.Properties#Properties()
+     */
+    public CommentedProperties()
+    {
+<span class="fc" id="L48">        super();</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     *  Creates new properties.
+     *
+     *  @param defaultValues A list of default values, which are used if in subsequent gets
+     *                       a key is not found.
+     */
+    public CommentedProperties( Properties defaultValues )
+    {
+<span class="nc" id="L59">        super( defaultValues );</span>
+<span class="nc" id="L60">    }</span>
+
+    /**
+     *  {@inheritDoc}
+     */
+    @Override
+    public synchronized void load( InputStream inStream ) throws IOException
+    {
+        // Load the file itself into a string
+<span class="fc" id="L69">        m_propertyString = FileUtil.readContents( inStream, &quot;ISO-8859-1&quot; );</span>
+
+        // Now load it into the properties object as normal
+<span class="fc" id="L72">        super.load( new ByteArrayInputStream( m_propertyString.getBytes(&quot;ISO-8859-1&quot;) ) );</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     *  Loads properties from a file opened by a supplied Reader.
+     *  
+     *  @param in The reader to read properties from
+     *  @throws IOException in case something goes wrong.
+     */
+    @Override
+    public synchronized void load( Reader in ) throws IOException
+    {
+<span class="nc" id="L84">        m_propertyString = FileUtil.readContents( in );</span>
+
+        // Now load it into the properties object as normal
+<span class="nc" id="L87">        super.load( new ByteArrayInputStream( m_propertyString.getBytes(&quot;ISO-8859-1&quot;) ) );</span>
+<span class="nc" id="L88">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized Object setProperty( String key, String value )
+    {
+<span class="fc" id="L96">        return put(key, value);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void store( OutputStream out, String comments ) throws IOException
+    {
+<span class="fc" id="L105">        byte[] bytes = m_propertyString.getBytes(&quot;ISO-8859-1&quot;);</span>
+<span class="fc" id="L106">        FileUtil.copyContents( new ByteArrayInputStream( bytes ), out );</span>
+<span class="fc" id="L107">        out.flush();</span>
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized Object put( Object arg0, Object arg1 )
+    {
+        // Write the property to the stored string
+<span class="fc" id="L117">        writeProperty( arg0, arg1 );</span>
+
+        // Return the result of from the superclass properties object
+<span class="fc" id="L120">        return super.put(arg0, arg1);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void putAll( Map&lt; ? , ? &gt; arg0 )
+    {
+        // Shove all of the entries into the property string
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        for( Iterator&lt; ? &gt; it = arg0.entrySet().iterator(); it.hasNext(); )</span>
+        {
+            @SuppressWarnings(&quot;unchecked&quot;) 
+<span class="nc" id="L133">            Entry&lt; Object, Object &gt; entry = ( Entry&lt; Object, Object &gt; )it.next();</span>
+<span class="nc" id="L134">            writeProperty( entry.getKey(), entry.getValue() );</span>
+<span class="nc" id="L135">        }</span>
+
+        // Call the superclass method
+<span class="nc" id="L138">        super.putAll(arg0);</span>
+<span class="nc" id="L139">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized Object remove( Object key )
+    {
+        // Remove from the property string
+<span class="fc" id="L148">        deleteProperty( key );</span>
+
+        // Call the superclass method
+<span class="fc" id="L151">        return super.remove(key);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized String toString()
+    {
+<span class="fc" id="L160">        return m_propertyString;</span>
+    }
+
+    private void deleteProperty( Object arg0 )
+    {
+        // Get key and value
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">        if ( arg0 == null )</span>
+        {
+<span class="nc" id="L168">            throw new IllegalArgumentException( &quot;Key cannot be null.&quot; );</span>
+        }
+<span class="fc" id="L170">        String key = arg0.toString();</span>
+
+        // Iterate through each line and replace anything matching our key
+<span class="fc" id="L173">        int idx = 0;</span>
+<span class="pc bpc" id="L174" title="2 of 4 branches missed.">        while( ( idx &lt; m_propertyString.length() ) &amp;&amp; ( ( idx = m_propertyString.indexOf( key, idx ) ) != -1 ) )</span>
+        {
+<span class="fc" id="L176">            int prevret = m_propertyString.lastIndexOf( &quot;\n&quot;, idx );</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">            if ( prevret != -1 )</span>
+            {
+                // Commented lines are skipped
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">                if ( m_propertyString.charAt( prevret + 1 ) == '#' )</span>
+                {
+<span class="nc" id="L182">                    idx += key.length();</span>
+<span class="nc" id="L183">                    continue;</span>
+                }
+            }
+
+            // If &quot;=&quot; present, delete the entire line
+<span class="fc" id="L188">            int eqsign = m_propertyString.indexOf( &quot;=&quot;, idx );</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">            if ( eqsign != -1 )</span>
+            {
+<span class="fc" id="L191">                int ret = m_propertyString.indexOf( &quot;\n&quot;, eqsign );</span>
+<span class="fc" id="L192">                m_propertyString = TextUtil.replaceString( m_propertyString, prevret, ret, &quot;&quot; );</span>
+<span class="fc" id="L193">                return;</span>
+            }
+<span class="nc" id="L195">        }</span>
+<span class="nc" id="L196">    }</span>
+
+    private void writeProperty( Object arg0, Object arg1 )
+    {
+        // Get key and value
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">        if ( arg0 == null )</span>
+        {
+<span class="nc" id="L203">            throw new IllegalArgumentException( &quot;Key cannot be null.&quot; );</span>
+        }
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">        if ( arg1 == null )</span>
+        {
+<span class="nc" id="L207">            arg1 = &quot;&quot;;</span>
+        }
+<span class="fc" id="L209">        String key = arg0.toString();</span>
+<span class="fc" id="L210">        String value = TextUtil.native2Ascii( arg1.toString() );</span>
+
+        // Iterate through each line and replace anything matching our key
+<span class="fc" id="L213">        int idx = 0;</span>
+<span class="pc bpc" id="L214" title="1 of 4 branches missed.">        while( ( idx &lt; m_propertyString.length() ) &amp;&amp; ( ( idx = m_propertyString.indexOf( key, idx ) ) != -1 ) )</span>
+        {
+<span class="fc" id="L216">            int prevret = m_propertyString.lastIndexOf( &quot;\n&quot;, idx );</span>
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">            if ( prevret != -1 )</span>
+            {
+                // Commented lines are skipped
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">                if ( m_propertyString.charAt( prevret + 1 ) == '#' )</span>
+                {
+<span class="nc" id="L222">                    idx += key.length();</span>
+<span class="nc" id="L223">                    continue;</span>
+                }
+            }
+
+            // If &quot;=&quot; present, replace everything in line after it
+<span class="fc" id="L228">            int eqsign = m_propertyString.indexOf( &quot;=&quot;, idx );</span>
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">            if ( eqsign != -1 )</span>
+            {
+<span class="fc" id="L231">                int ret = m_propertyString.indexOf( &quot;\n&quot;, eqsign );</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">                if ( ret == -1 )</span>
+                {
+<span class="nc" id="L234">                    ret = m_propertyString.length();</span>
+                }
+<span class="fc" id="L236">                m_propertyString = TextUtil.replaceString( m_propertyString, eqsign + 1, ret, value );</span>
+<span class="fc" id="L237">                return;</span>
+            }
+<span class="nc" id="L239">        }</span>
+
+        // If it was not found, we'll add it to the end.
+<span class="fc" id="L242">        m_propertyString += &quot;\n&quot; + key + &quot; = &quot; + value + &quot;\n&quot;;</span>
+<span class="fc" id="L243">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
