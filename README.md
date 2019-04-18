@@ -1,5 +1,7 @@
 # SOEN6611 project final report
 # Team name : Team C
+
+
 # Repository structure
 *copy and paste code both in config_coverage.xml and config_mutation.xml to every project's pom.xml*
 
@@ -12,6 +14,7 @@ SOEN6611
 └───configurations // codes need to be added in project's pom.xml
 │     config_jacoco.xml  // jacoco plugin config
 │     config_mutation.xml //pitest plugin config
+|     run.sh //bash to run the plugin  
 │   
 └───raw_data //raw data of five project in 5 dictionary
 |    └───commons-lang
@@ -31,20 +34,20 @@ SOEN6611
 |           └───pit-reports   
 └───processed_data // data after processed
 |    └───commons-lang
-|    |       └───jacoco-ut
-|    |       └───pit-reports
+|    |       └───lang_class_level_metric.csv
+|    |       └───lang_project_level_metric.csv
 |    └───jspwiki
-|    |       └───jacoco-ut
-|    |       └───pit-reports
+|    |       └───jspwiki_class_level_metric.csv
+|    |       └───kspwiki_project_level_metric.csv
 |    └───commons-net
-|    |       └───jacoco-ut
-|    |       └───pit-reports
+|    |       └───net_class_level_metric.csv
+|    |       └───net_project_level_metric.csv
 |    └───commons-codec
-|    |       └───jacoco-ut
-|    |       └───pit-reports
+|    |       └───codec_class_level_metric.csv
+|    |       └───codec_project_level_metric.csv
 |    └───collections  
-|            └───jacoco-ut
-|            └───pit-reports  
+|            └───collections_class_level_metric.csv
+|            └───collections_project_level_metric.csv  
 └───data_analysis_script // data analysis sciprt use R
     └───commons-lang              
 ```

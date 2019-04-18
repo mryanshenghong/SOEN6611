@@ -1,0 +1,7 @@
+project,post.release.defects,SLOC,post.release.defect.density,files changed,added,deleted,statement_coverage,branch_coverage,DLOC
+jspwiki_2.10,0,29431,0,159,4838,2805,0.52,0.48,7802
+jspwiki_2.10.2,10,28537,0.350422259,235,8911,11514,0.52,0.48,20660
+jspwiki_2.10.3,1,38481,0.025986851,20,297,307,0.52,0.47,624
+jspwiki_2.10.4,1,38481,0.025986851,6,27,18,0.52,0.47,51
+jspwiki_2.10.5,1,38481,0.025986851,512,8750,7702,0.52,0.47,16964
+jspwiki_2.11.0.M1,1,38481,0.025986851,103,1401,1119,0.52,0.47,2623
