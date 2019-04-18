@@ -14,6 +14,7 @@ SOEN6611
 └───configurations // codes need to be added in project's pom.xml
 │     config_jacoco.xml  // jacoco plugin config
 │     config_mutation.xml //pitest plugin config
+|     run.sh //bash to run the plugin  
 │   
 └───raw_data //raw data of five project in 5 dictionary
 |    └───commons-lang
