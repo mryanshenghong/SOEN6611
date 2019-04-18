@@ -1,0 +1,4 @@
+version,post_release_defects,post_release_defect_density,SLOC,DLOC,ADD,DEL,LOC,Statement_coverage,Branch_coverage
+commons_collections_4.3,12,0.0904397633492859,132762,603,308,295,126511,0.86,0.81
+commons_collections_4.2,43,0.333059656406364,132685,1771,1032,739,126337,0.86,0.81
+collections_4.1,292,2.64277310163816,129106,10013,6262,3751,123976,0.84,0.78

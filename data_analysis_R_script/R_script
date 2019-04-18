@@ -1,7 +1,7 @@
 library("moments", lib.loc="/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
 
 ######codec(metrics 1, 2, 3, 4)
-data<-read.csv("~/Downloads/codec.csv")
+data<-read.csv("~/Downloads/codec_class_level_metrics.csv")
 names(data)
 keep=c("Statement_Coverage", "Branch_Coverage", "cc", "Mutation_Score")
 data=data[, (names(data) %in% keep)]
@@ -12,7 +12,7 @@ skewness(data$Mutation_Score)
 cor(data, method = "spearman")
 
 ######codec(metrics 1, 2, 5, 6)
-data<-read.csv("~/Downloads/codec5_6.csv")
+data<-read.csv("~/Downloads/codec_project_level_metrics.csv")
 keep=c("Statement_coverage", "Branch_Coverage", "DLOC", "post.release.defects.density")
 data=data[, (names(data) %in% keep)]
 skewness(data$post.release.defects.density)
@@ -22,7 +22,7 @@ skewness(data$DLOC)
 cor(data, method = "spearman")
 
 ######jspwiki(metrics 1, 2, 3, 4)
-data<-read.csv("~/Downloads/jspwiki.csv")
+data<-read.csv("~/Downloads/jspwiki_class_level_metrics.csv")
 keep=c("Statement_Coverage", "Branch_Coverage", "CC", "Mutation_Score")
 data=data[, (names(data) %in% keep)]
 skewness(data$Statement_Coverage)
@@ -32,7 +32,7 @@ skewness(data$Mutation_Score)
 cor(data, method = "spearman")
 
 ######jspwiki(metrics 1, 2, 5, 6)
-data<-read.csv("~/Downloads/jspwiki5_6.csv")
+data<-read.csv("~/Downloads/jspwiki_project_level_metrics.csv")
 keep=c("statement_coverage", "branch_coverage", "DLOC", "post.release.defect.density")
 data=data[, (names(data) %in% keep)]
 skewness(data$post.release.defect.density)
@@ -42,7 +42,7 @@ skewness(data$DLOC)
 cor(data, method = "spearman")
 
 ######lang(metrics 1, 2, 3, 4)
-data<-read.csv("~/Downloads/lang.csv")
+data<-read.csv("~/Downloads/lang_class_level_metrics.csv")
 keep=c("Statement_Coverage", "Branch_Coverage", "CC", "Line_CoverageMutation_Coverage")
 data=data[, (names(data) %in% keep)]
 skewness(data$Statement_Coverage)
@@ -52,7 +52,7 @@ skewness(data$Line_CoverageMutation_Coverage)
 cor(data, method = "spearman")
 
 ######lang(metrics 1, 2, 5, 6)
-data<-read.csv("~/Downloads/lang5_6.csv")
+data<-read.csv("~/Downloads/lang_project_level_metrics.csv")
 keep=c("dloc", "post_bugs_density", "statement_coverage", "branch_coverage")
 data=data[, (names(data) %in% keep)]
 skewness(data$dloc)
@@ -62,7 +62,7 @@ skewness(data$branch_coverage)
 cor(data, method = "spearman")
 
 ######net(metrics 1, 2, 3, 4)
-data<-read.csv("~/Downloads/net.csv")
+data<-read.csv("~/Downloads/net_class_level_metrics.csv")
 keep=c("Statement_Coverage", "Branch_Coverage", "CC", "Mutaion_Coverage")
 data=data[, (names(data) %in% keep)]
 skewness(data$Statement_Coverage)
@@ -72,7 +72,7 @@ skewness(data$Mutaion_Coverage)
 cor(data, method = "spearman")
 
 ######net(metrics 1, 2, 5, 6)
-data<-read.csv("~/Downloads/net5_6.csv")
+data<-read.csv("~/Downloads/net_project_level_metrics.csv")
 keep=c("dloc", "post_bugs_density", "statement_coverage", "branch_coverage")
 data=data[, (names(data) %in% keep)]
 skewness(data$dloc)
@@ -82,7 +82,7 @@ skewness(data$branch_coverage)
 cor(data, method = "spearman")
 
 ######collections(metrics 1, 2, 3, 4)
-data<-read.csv("~/Downloads/collections.csv")
+data<-read.csv("~/Downloads/collections_class_level_metrics.csv")
 keep=c("statement_coverage","branch_coverage","cc", "mutation_score")
 data=data[, (names(data) %in% keep)]
 skewness(data$statement_coverage)
@@ -92,7 +92,7 @@ skewness(data$mutation_score)
 cor(data, method = "spearman")
 
 ######collections(metrics 1, 2, 5, 6)
-data<-read.csv("~/Downloads/collections5_6.csv")
+data<-read.csv("~/Downloads/collections_project_level_metrics.csv")
 keep=c("post_release_defect_density", "DLOC", "Statement_coverage", "Branch_coverage")
 data=data[, (names(data) %in% keep)]
 skewness(data$post_release_defect_density)
