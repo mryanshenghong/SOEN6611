@@ -1,0 +1,5 @@
+version,post release bugs,,version,,DLOC,ADD,DEL,,version,SC,BC,LOC
+,,,collections-4.3-RC1,master,603,308,295,,collections-4.3-RC1,0.86,0.81,126511
+collections-4.3-RC1,12,,commons-collections-4.2,collections-4.3-RC1,1771,1032,739,,commons-collections-4.2,0.86,0.81,126337
+commons-collections-4.2,43,,collections-4.1,commons-collections-4.2,10013,6262,3751,,collections-4.1,0.84,0.78,123976
+collections-4.1 ,292,,collections-0-01,collections-4.1,127911,117680,10231,,collections-0-01,withoutPOM,,10742
