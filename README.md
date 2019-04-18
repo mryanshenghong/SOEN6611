@@ -1,13 +1,7 @@
 # SOEN6611 project final report
 # Team name : Team C
-#Team Members
-| name |
-| :------: |
-| Wenhui Guo |
-| Jing Yang |
-| Hengyang An |
-| Xintong Chen |
-| Shenghong Yan |
+
+
 # Repository structure
 *copy and paste code both in config_coverage.xml and config_mutation.xml to every project's pom.xml*
 
@@ -56,3 +50,13 @@ SOEN6611
 └───data_analysis_script // data analysis sciprt use R
     └───commons-lang              
 ```
+
+#Team Members
+
+| name |
+| :------: |
+| Wenhui Guo |
+| Jing Yang |
+| Hengyang An |
+| Xintong Chen |
+| Shenghong Yan |
